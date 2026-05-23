@@ -3,23 +3,23 @@
 Parses unstructured workers' compensation claim notes into a
 queryable SQLite dataset and answers four canned queries.
 
-> **Status: Phase 0 (scaffold).** No pipeline code yet — the design
-> phase is complete and committed in markdown. See
-> `implementation-plan.md` for the phased roadmap.
+> **Status: Phase 1 (domain model).** Pipeline scaffold + pydantic
+> models for Claim / Note / Event. See `docs/implementation-plan.md`
+> for the phased roadmap.
 
 ## Design docs
 
 Read in order (also tracked in `CLAUDE.md`):
 
-1. `Exercise.md` — the brief.
-2. `DESIGN.md` — master design.
+1. `docs/Exercise.md` — the brief.
+2. `docs/DESIGN.md` — master design.
 3. `design-decisions.md` — DD-001 … DD-013.
-4. `data-modeling.md` — `Claim` + `Event` schema.
-5. `normalizer.md` — Normalizer deep dive.
-6. `extractor.md` — Extractor deep dive.
-7. `resolver.md` — Resolver algorithm.
+4. `docs/data-modeling.md` — `Claim` + `Event` schema.
+5. `docs/normalizer.md` — Normalizer deep dive.
+6. `docs/extractor.md` — Extractor deep dive.
+7. `docs/resolver.md` — Resolver algorithm.
 8. `query_feasibility_analysis/` — per-query feasibility (Q3 → Q1 → Q2 → Q4).
-9. `claims file analysis.md` — sample-data analysis.
+9. `docs/claims file analysis.md` — sample-data analysis.
 
 ## Setup
 
@@ -34,7 +34,7 @@ py -3.12 -m uv sync
 
 # Configure secrets
 Copy-Item .env.example .env
-# Decrypt the OpenAI key from Exercise.md and paste into .env
+# Decrypt the OpenAI key from docs/Exercise.md and paste into .env
 ```
 
 ## Develop
@@ -42,9 +42,6 @@ Copy-Item .env.example .env
 ```powershell
 # Run tests
 py -3.12 -m uv run pytest
-
-# Type-check (strict)
-py -3.12 -m uv run pyright
 ```
 
 ## Layout

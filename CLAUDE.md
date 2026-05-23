@@ -2,25 +2,25 @@
 
 This repository is the **Adaptional Take-Home Exercise**: design and (eventually) build a system that ingests unstructured workers'-compensation claim notes, parses them into structured events with an LLM, stores them in SQLite, and answers four canned queries over a corpus.
 
-**The repo is currently design-complete and implementation-empty.** Several long md files capture deeply iterated design decisions. Do not bulldoze past them. Read in the order below before suggesting changes or writing code.
+**Status:** design-complete (md docs under `./docs/`); implementation in progress — see `./docs/implementation-plan.md` for the phased roadmap. Several long md files capture deeply iterated design decisions. Do not bulldoze past them. Read in the order below before suggesting changes or writing code.
 
 ---
 
 ## Reading order
 
-1. **`./Exercise.md`** — the original take-home brief. The four queries and the input shape come from here.
-2. **`./DESIGN.md`** — master design document. Sections cover the queries → facts mapping, the domain model, the pipeline architecture (Ingest → Extract → Normalize → Resolve → Store → Query), and scope.
-3. **`./design-decisions.md`** — numbered, accepted design decisions (**DD-001 … DD-012**). Each entry has a rationale and what it commits us to. If a fresh idea conflicts with one of these, the DD wins until explicitly re-litigated.
-4. **`./data-modeling.md`** — Claim and Event schema deep dive. Active event types, future-but-not-built event types, the JSON-attributes tradeoff, and the promotion path from hot JSON field to typed column.
-5. **`./normalizer.md`** — Normalizer stage deep dive. Two concerns: destructive text cleanup (mojibake repair, line endings, whitespace) and non-destructive date interpretation via a shared date parser. Why body dates are not rewritten in-place (the `evidence_quote` substring check depends on body fidelity), the two-digit-year pivot rule, yearless-date inference, the date-format and mojibake catalogs, and the "flag, don't paper over" failure-mode policy.
-6. **`./extractor.md`** — Extractor stage deep dive. The hybrid rule-vs-LLM principle, the `Extractor` interface, the catalog of all five active extractors (Reserve, Appointment Marker as fast-path, Appointment LLM as general path, RTW, RTW Terminal) with triggers / output schemas / rationale, the four LLM contract principles (schema-constrained output, discriminated-union empty case, required `evidence_quote` with substring check, explicit negative prompt rules), multi-extractor coordination on a single note, and failure modes.
-7. **`./resolver.md`** — Resolver algorithm deep dive. Five-pass algorithm (normalize → match-key → merge → derive → emit), match-key construction per event type, merge rules, the pluggable matching-strategy interface, provider canonicalization, fuzzy-date window rules, failure modes, and testability. Load-bearing for Q1's dedup, Q2's status precedence, Q3's `delta` derivation, and Q4's cross-note merge.
+1. **`./docs/Exercise.md`** — the original take-home brief. The four queries and the input shape come from here.
+2. **`./docs/DESIGN.md`** — master design document. Sections cover the queries → facts mapping, the domain model, the pipeline architecture (Ingest → Extract → Normalize → Resolve → Store → Query), and scope.
+3. **`./design-decisions.md`** — numbered, accepted design decisions (**DD-001 … DD-013**). Each entry has a rationale and what it commits us to. If a fresh idea conflicts with one of these, the DD wins until explicitly re-litigated.
+4. **`./docs/data-modeling.md`** — Claim and Event schema deep dive. Active event types, future-but-not-built event types, the JSON-attributes tradeoff, and the promotion path from hot JSON field to typed column.
+5. **`./docs/normalizer.md`** — Normalizer stage deep dive. Two concerns: destructive text cleanup (mojibake repair, line endings, whitespace) and non-destructive date interpretation via a shared date parser. Why body dates are not rewritten in-place (the `evidence_quote` substring check depends on body fidelity), the two-digit-year pivot rule, yearless-date inference, the date-format and mojibake catalogs, and the "flag, don't paper over" failure-mode policy.
+6. **`./docs/extractor.md`** — Extractor stage deep dive. The hybrid rule-vs-LLM principle, the `Extractor` interface, the catalog of all five active extractors (Reserve, Appointment Marker as fast-path, Appointment LLM as general path, RTW, RTW Terminal) with triggers / output schemas / rationale, the four LLM contract principles (schema-constrained output, discriminated-union empty case, required `evidence_quote` with substring check, explicit negative prompt rules), multi-extractor coordination on a single note, and failure modes.
+7. **`./docs/resolver.md`** — Resolver algorithm deep dive. Five-pass algorithm (normalize → match-key → merge → derive → emit), match-key construction per event type, merge rules, the pluggable matching-strategy interface, provider canonicalization, fuzzy-date window rules, failure modes, and testability. Load-bearing for Q1's dedup, Q2's status precedence, Q3's `delta` derivation, and Q4's cross-note merge.
 8. **`./query_feasibility_analysis/README.md`** — index for the per-query feasibility docs. Reading order inside that folder is Q3 → Q1 → Q2 → Q4 (by increasing difficulty):
    - `q3-reserve-changes.md` — pure rule extraction, never LLM
    - `q1-return-to-work.md` — LLM extractor with strict prompt contract; discriminated-union return
    - `q2-appointments-attended.md` — hybrid extraction; the dominant driver of the Resolver stage
    - `q4-schedule-to-seen.md` — cross-note merge; alone justifies the Resolver as a first-class stage
-9. **`./claims file analysis.md`** — analysis of the two sample claim files (`./sample_claim_notes/`). What real input looks like, what surface forms each query's facts appear in.
+9. **`./docs/claims file analysis.md`** — analysis of the two sample claim files (`./sample_claim_notes/`). What real input looks like, what surface forms each query's facts appear in.
 
 ---
 
@@ -38,7 +38,7 @@ These are non-obvious from any one file; together they prevent re-litigating dec
 - **Evidence-only state promotion.** A `scheduled` appointment does **not** auto-promote to `attended` from silence. Q1's RTW extractor extracts only when the note explicitly states the return occurred — offers and discussion produce no event. Same principle applies everywhere: derived facts require positive evidence; default to the weaker state.
 - **Status precedence for appointments:** `attended > missed > cancelled > scheduled`. Resolver merges by strongest evidence, not by chronology.
 - **Financial data never goes through the LLM.** Q3 (reserve changes) is pure regex against templated text — see `q3-reserve-changes.md`. Money + LLM = silent rounding errors.
-- **SQLite via `better-sqlite3`.** Date math uses `julianday(...) - julianday(...)`. JSON access uses `json_extract(attributes, '$.field')`. Expression indexes go on the hot `json_extract` paths.
+- **SQLite via stdlib `sqlite3` (Python).** Date math uses `julianday(...) - julianday(...)`. JSON access uses `json_extract(attributes, '$.field')`. Expression indexes go on the hot `json_extract` paths.
 - **One pipeline, not branched by claim type.** Claim-type-specific behavior lives in prompts and resolver parameters, not in a forked pipeline. (User explicitly considered and rejected a per-claim-type pipeline fork.)
 
 ---
@@ -71,20 +71,17 @@ A few observed patterns. Honoring these saves rework:
 
 ## State of the repo
 
-**Design-complete (committed in md):**
+**Design-complete (committed in md under `./docs/`):**
 - Domain model (Claim + Event with 4 active types)
-- Twelve accepted design decisions
+- Thirteen accepted design decisions
 - Per-query feasibility for Q1–Q4
 - Pipeline architecture (5 stages: Ingest → Extract → Normalize → Resolve → Query)
 - Source-data analysis on the two sample claims
 
-**Not yet started (no code exists):**
-- SQLite schema file
-- Ingestion / extraction / normalization / resolver code
-- LLM prompt library
-- Canned query functions
-- Eval harness (DD-009, deferred to post-MVP)
-- Provider canonicalization layer
+**Implementation progress** (tracked in `./docs/implementation-plan.md`):
+- Phase 0 ✅ scaffold (Python 3.12, `uv`, `pytest`, package-per-stage layout)
+- Phase 1 ✅ pydantic v2 domain model (`src/claims/models/`)
+- Phase 2+ pending — storage, loader, normalizer, extractors, resolver, query
 
 When implementation begins, the canned query function signatures already exist in the query feasibility docs — treat them as contracts.
 

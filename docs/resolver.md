@@ -210,6 +210,78 @@ Only `appointment` uses windowing. `reserve_change` is exact
 date+bucket; `return_to_work` is exact `(date, duty_type)`; `rtw_terminal`
 is claim-level unique.
 
+**Superseded by DD-016.** §§5–6 above describe the pre-DD-016
+design (regex provider canonicalization + fuzzy date window).
+Both were replaced after the Phase 12 verification audit
+surfaced the structural failure mode they produced. The current
+design is:
+
+- **Party identity**: the LLM emits a `parties: tuple[str, ...]`
+  per appointment containing every named individual and
+  organization involved. The resolver applies deterministic
+  lossless normalization (lowercase, strip honorifics/degree
+  suffixes, `&`→`and`, collapse whitespace) and compares with
+  **exact set intersection**. ≥1 shared entity → same encounter.
+  An empty list on either side does not block the merge (date
+  alone carries it). See `resolver/parties.py`.
+- **Date identity**: exact `encounter_date` equality. No `±N day`
+  window. `encounter_date = scheduled_for_date or occurred_on`.
+  Date-format ambiguity is the Normalizer's job (DD-013); when
+  parsed dates differ, the resolver trusts them.
+
+### Known residual failure mode — same facility, same day, two different clinicians
+
+When one claimant sees two **different** clinicians at the **same
+facility** on the **same day** (e.g. Dr. Caldwell **and** Dr. Farano
+both at Spine & Neurology Group on 4/22), both events carry the
+same `encounter_date` and the shared facility name in their
+`parties` lists overlaps — so the merge rule (≥1 shared entity)
+incorrectly collapses the two encounters into one.
+
+```
+Note A: parties = ["Caldwell", "Spine & Neurology Group"]  4/22
+Note B: parties = ["Farano",   "Spine & Neurology Group"]  4/22
+                                  ↑
+                       shared party → MERGE (incorrect)
+```
+
+The merged event's `parties` list contains both clinicians, so
+the collapse is **auditable, not silent** — but Q2 undercounts
+attended visits by 1 for that day, and Q4 may pair the wrong
+(`scheduled_for_date`, `occurred_on`) dates if both encounters
+had scheduling events.
+
+**Why accepted for the MVP.** Pattern does not occur in either
+sample claim. Same-day multi-specialist visits at one practice
+are rare outside hospital inpatient stays. The artifact is
+bounded (must be same claim, same date, same practice) and
+visible in the merged record.
+
+**Local fix when it matters.** Tighten `parties_overlap` from
+"any shared party" to "shared **person** party":
+
+```
+# pseudo-Python — not implemented; defer until a real corpus
+# shows the pattern matters.
+person_overlap = {p for p in a.parties if is_person(p)} \
+                  & {p for p in b.parties if is_person(p)}
+```
+
+With facilities treated as confirming evidence rather than
+identifying evidence, the Caldwell/Farano case stays as two
+distinct encounters. Trade-off: the cross-reference case where
+one note names only the org and another names only the doctor
+(rare in the samples; see DD-016) would stop merging — would
+need an explicit alias from the doctor to their primary practice
+to recover.
+
+Contrast worth keeping in mind: the rejected **fuzzy-string**
+failure mode (`"Harmon"` collapsing with `"Harman"`) is *silent
+and unbounded* — any two notes with similar provider strings
+might merge with no signal. The accepted **same-facility-same-day**
+failure mode is *bounded and inspectable*. We keep the second; we
+reject the first.
+
 ---
 
 ## 7. Failure modes and data-quality flags
@@ -225,6 +297,7 @@ silent coercion.
 | `delta = 0` reserve change | Dropped silently — documented restatement behavior, not an error |
 | Same-minute reserve updates, different buckets (claim 1 L392+L396) | Both kept — different match keys, never group |
 | Canonicalized provider name not seen elsewhere in the claim | Emit with low-confidence flag |
+| **Same claim, same date, two different clinicians at same facility** | **MERGED into one event (DD-016 known failure mode). Both clinicians stay in merged `parties` list — collapse is auditable. Q2 undercount = 1 for that day. See §6 above.** |
 
 Flags stored as `attributes.data_quality_flags[]`. A corpus-wide health
 report aggregating flag counts is out of MVP scope but easy to add.

@@ -111,7 +111,7 @@ def test_attended_appointment_yields_occurred_on() -> None:
                 _ExtractedAppointment(
                     status="attended",
                     appointment_date=date(2025, 6, 3),
-                    provider="Dr. Harmon",
+                    parties=["Harmon"],
                     evidence_quote="EE attended PT with Dr. Harmon on 6/3/2025.",
                 )
             ]
@@ -124,7 +124,7 @@ def test_attended_appointment_yields_occurred_on() -> None:
     assert attrs.status == "attended"
     assert attrs.occurred_on == date(2025, 6, 3)
     assert attrs.scheduled_for_date is None
-    assert attrs.provider == "Dr. Harmon"
+    assert attrs.parties == ("Harmon",)
     assert event.extraction_method == "llm"
     assert event.event_date == date(2025, 6, 3)
 
@@ -139,7 +139,7 @@ def test_scheduled_appointment_yields_schedule_fields() -> None:
                 _ExtractedAppointment(
                     status="scheduled",
                     appointment_date=date(2025, 9, 23),
-                    provider=None,
+                    parties=[],
                     evidence_quote="Next consult set for 9/23.",
                 )
             ]
@@ -164,7 +164,7 @@ def test_missed_and_cancelled_map_to_occurred_on() -> None:
                 _ExtractedAppointment(
                     status="missed",
                     appointment_date=date(2025, 8, 11),
-                    provider="Dr. Caldwell",
+                    parties=["Caldwell"],
                     evidence_quote="Missed appt with Dr. Caldwell on 8/11.",
                 )
             ]
@@ -191,7 +191,7 @@ def test_evidence_quote_failing_substring_check_is_dropped() -> None:
                 _ExtractedAppointment(
                     status="attended",
                     appointment_date=date(2025, 6, 3),
-                    provider=None,
+                    parties=[],
                     evidence_quote="A quote that does not appear in the body.",
                 )
             ]
@@ -209,7 +209,7 @@ def test_evidence_quote_whitespace_tolerant() -> None:
                 _ExtractedAppointment(
                     status="attended",
                     appointment_date=date(2025, 6, 3),
-                    provider=None,
+                    parties=[],
                     evidence_quote="EE attended PT on 6/3.",
                 )
             ]
@@ -239,7 +239,7 @@ def test_appointment_date_missing_uses_note_date_for_event_date() -> None:
                 _ExtractedAppointment(
                     status="attended",
                     appointment_date=None,
-                    provider=None,
+                    parties=[],
                     evidence_quote="EE attended today's session.",
                 )
             ]
@@ -274,7 +274,7 @@ def test_run_all_routes_appointment_note_to_llm() -> None:
                 _ExtractedAppointment(
                     status="attended",
                     appointment_date=date(2025, 6, 3),
-                    provider="Dr. Harmon",
+                    parties=["Harmon"],
                     evidence_quote="EE attended PT on 6/3.",
                 )
             ]
@@ -285,3 +285,26 @@ def test_run_all_routes_appointment_note_to_llm() -> None:
     appts = [e for e in events if e.event_type == "appointment"]
     assert len(appts) == 1
     assert llm.calls  # the LLM was actually invoked
+
+
+def test_llm_party_dedup_collapses_duplicates() -> None:
+    """LLMs occasionally repeat the same entity in `parties` with
+    slight surface variation. The extractor dedups case-insensitively
+    at construction time, preserving the first-seen surface form."""
+    note = _note("EE attended PT with Dr. Harmon on 6/3.")
+    llm = _FakeLLM(
+        AppointmentExtractionResponse(
+            appointments=[
+                _ExtractedAppointment(
+                    status="attended",
+                    appointment_date=date(2025, 6, 3),
+                    parties=["Harmon", "harmon", "  Harmon  "],
+                    evidence_quote="EE attended PT with Dr. Harmon on 6/3.",
+                )
+            ]
+        )
+    )
+    [event] = AppointmentExtractor(llm).extract(note)
+    attrs = event.attributes
+    assert isinstance(attrs, AppointmentAttributes)
+    assert attrs.parties == ("Harmon",)

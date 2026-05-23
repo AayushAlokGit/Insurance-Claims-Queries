@@ -105,7 +105,7 @@ def test_provider_lookup_in_following_lines() -> None:
     [past, *_] = e.extract(_note(body))
     attrs = past.attributes
     assert isinstance(attrs, AppointmentAttributes)
-    assert attrs.provider == "Dr. Harmon"
+    assert attrs.parties == ("Dr. Harmon",)
 
 
 def test_provider_lookup_finds_provider_keyword() -> None:
@@ -117,15 +117,15 @@ def test_provider_lookup_finds_provider_keyword() -> None:
     [event] = e.extract(_note(body))
     attrs = event.attributes
     assert isinstance(attrs, AppointmentAttributes)
-    assert attrs.provider == "Bridge Functional Capacity Evaluators"
+    assert attrs.parties == ("Bridge Functional Capacity Evaluators",)
 
 
-def test_provider_absent_yields_none() -> None:
+def test_provider_absent_yields_empty_parties() -> None:
     e = AppointmentMarkerExtractor()
     [event] = e.extract(_note("Date of Appointment: 11-14-25\nUnrelated line"))
     attrs = event.attributes
     assert isinstance(attrs, AppointmentAttributes)
-    assert attrs.provider is None
+    assert attrs.parties == ()
 
 
 def test_multi_marker_note_emits_two_events() -> None:

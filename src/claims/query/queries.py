@@ -90,11 +90,25 @@ def q1_return_to_work(conn: Connection, claim_id: str) -> Q1Result:
     return Q1Pending(days_open=days_open)
 
 
+def _parse_parties(raw: str | None) -> list[str]:
+    """JSON1 surfaces the stored tuple as a JSON array string;
+    decode it into a Python list. Null / missing → empty list."""
+    if raw is None:
+        return []
+    try:
+        loaded = json.loads(raw)
+    except (TypeError, ValueError):
+        return []
+    if not isinstance(loaded, list):
+        return []
+    return [str(x) for x in loaded if isinstance(x, str)]
+
+
 def q2_appointments_attended(conn: Connection, claim_id: str) -> Q2Result:
     rows = conn.execute(
         """
         SELECT event_date,
-               json_extract(attributes, '$.provider')         AS provider,
+               json_extract(attributes, '$.parties')          AS parties,
                json_extract(attributes, '$.specialty')        AS specialty,
                json_extract(attributes, '$.appointment_type') AS appointment_type
         FROM event
@@ -108,7 +122,7 @@ def q2_appointments_attended(conn: Connection, claim_id: str) -> Q2Result:
     appointments = [
         Q2Appointment(
             date=date.fromisoformat(r["event_date"]),
-            provider=r["provider"],
+            parties=_parse_parties(r["parties"]),
             specialty=r["specialty"],
             appointment_type=r["appointment_type"],
         )
@@ -175,7 +189,7 @@ def q4_schedule_to_seen(conn: Connection, claim_id: str) -> Q4Result:
     outputs into a single event."""
     rows = conn.execute(
         """
-        SELECT json_extract(attributes, '$.provider')             AS provider,
+        SELECT json_extract(attributes, '$.parties')              AS parties,
                json_extract(attributes, '$.scheduled_notice_date') AS notice,
                json_extract(attributes, '$.scheduled_for_date')    AS booked,
                json_extract(attributes, '$.occurred_on')           AS occurred
@@ -205,7 +219,7 @@ def q4_schedule_to_seen(conn: Connection, claim_id: str) -> Q4Result:
         on_time_delta = (occurred - booked).days
         visits.append(
             Q4Visit(
-                provider=r["provider"],
+                parties=_parse_parties(r["parties"]),
                 scheduled_notice_date=notice,
                 scheduled_for_date=booked,
                 occurred_on=occurred,

@@ -58,16 +58,28 @@ class ReserveChangeAttributes(_AttributesBase):
 
 class AppointmentAttributes(_AttributesBase):
     """Q2 + Q4 payload. Three date fields support the Resolver's
-    schedule-to-seen merge (data-modeling.md §4.2)."""
+    schedule-to-seen merge (data-modeling.md §4.2). `parties` per
+    DD-016: the LLM emits the set of named individuals and
+    organizations involved in this encounter; the resolver merges
+    by claim + encounter_date + party-set overlap. Empty list
+    means no identifiable party (the merge falls to date alone)."""
 
     type: Literal["appointment"] = "appointment"
-    provider: str | None = None
+    parties: tuple[str, ...] = ()
     specialty: str | None = None
     scheduled_notice_date: date | None = None
     scheduled_for_date: date | None = None
     occurred_on: date | None = None
     status: AppointmentStatus
     appointment_type: AppointmentType | None = None
+
+    @property
+    def encounter_date(self) -> date | None:
+        """DD-016: stable encounter identity. scheduled_for_date
+        takes precedence (booking notes), falls back to occurred_on
+        (visit summaries that don't record the original booking
+        date)."""
+        return self.scheduled_for_date or self.occurred_on
 
 
 class ReturnToWorkAttributes(_AttributesBase):

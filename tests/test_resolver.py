@@ -1,11 +1,11 @@
 """Phase 9: Resolver tests.
 
 Three concerns:
-- provider canonicalization (the load-bearing primitive for
+- party-set normalization and overlap (DD-016; load-bearing for
   appointment dedup)
 - reserve_change delta derivation (Q3 exit criterion)
-- appointment merge with status precedence and proximity
-  window (Q2 exit criterion, Q4 partial)
+- appointment merge with status precedence and the DD-016 merge
+  key — (claim, encounter_date exact, party-overlap)
 
 End-to-end pinning against the live extractor output stays in
 Phase 11's query-layer tests; here we focus on the resolver
@@ -26,7 +26,8 @@ from claims.models import (
     ReturnToWorkAttributes,
 )
 from claims.resolver import (
-    canonicalize_provider,
+    normalize_party,
+    parties_overlap,
     resolve,
     resolve_appointments,
     resolve_reserve_changes,
@@ -34,7 +35,7 @@ from claims.resolver import (
 )
 
 
-# --- canonicalize_provider ---------------------------------------
+# --- normalize_party --------------------------------------------
 
 
 @pytest.mark.parametrize(
@@ -45,23 +46,68 @@ from claims.resolver import (
         ("Harmon, MD", "harmon"),
         ("Dr. Caldwell, MD", "caldwell"),
         ("Vega", "vega"),
-        ("Bridge Functional Capacity Evaluators",
-         "bridge functional capacity evaluators"),
+        # Whole-org names stay whole — no `.split()[-1]` mangling.
+        (
+            "Bridge Functional Capacity Evaluators",
+            "bridge functional capacity evaluators",
+        ),
         ("ATI Physical Therapy", "ati physical therapy"),
+        # Ampersand → 'and' for cross-spelling match.
+        ("Spine & Neurology Group", "spine and neurology group"),
+        ("Spine and Neurology Group", "spine and neurology group"),
         (None, None),
         ("   ", None),
+        ("", None),
     ],
 )
-def test_canonicalize_provider_table(
+def test_normalize_party_table(
     raw: str | None, expected: str | None
 ) -> None:
-    assert canonicalize_provider(raw) == expected
+    assert normalize_party(raw) == expected
 
 
-def test_same_provider_different_forms_canonicalize_equal() -> None:
+def test_same_person_different_forms_normalize_equal() -> None:
     forms = ["Dr. Harmon", "Harmon", "Dr Harmon, MD", "  Dr. Harmon  "]
-    canonicals = {canonicalize_provider(f) for f in forms}
-    assert canonicals == {"harmon"}
+    norms = {normalize_party(f) for f in forms}
+    assert norms == {"harmon"}
+
+
+# --- parties_overlap --------------------------------------------
+
+
+def test_overlap_when_shared_person() -> None:
+    assert parties_overlap(
+        ["Dr. Harmon", "Orthopedic & Spine Associates"],
+        ["Harmon"],
+    )
+
+
+def test_overlap_when_shared_org() -> None:
+    assert parties_overlap(
+        ["Dr. Caldwell", "Spine & Neurology Group"],
+        ["Spine and Neurology Group"],
+    )
+
+
+def test_no_overlap_when_completely_disjoint() -> None:
+    assert not parties_overlap(
+        ["Dr. Harmon"], ["Dr. Vega"]
+    )
+
+
+def test_empty_side_does_not_block_merge() -> None:
+    """DD-016: when one side has no identifiable party (Marker
+    saw only a date), party overlap must NOT block the merge —
+    date alone carries it."""
+    assert parties_overlap([], ["Dr. Harmon"])
+    assert parties_overlap(["Dr. Harmon"], [])
+    assert parties_overlap([], [])
+
+
+def test_overlap_ignores_normalization_noise() -> None:
+    assert parties_overlap(
+        ["Dr. Harmon, MD"], ["  harmon  "]
+    )
 
 
 # --- reserve_change ---------------------------------------------
@@ -148,7 +194,7 @@ def test_different_buckets_are_independent() -> None:
 
 def _appt(
     *,
-    provider: str | None,
+    parties: tuple[str, ...] = (),
     occurred_on: date | None = None,
     scheduled_for_date: date | None = None,
     scheduled_notice_date: date | None = None,
@@ -163,7 +209,7 @@ def _appt(
         event_type="appointment",
         event_date=anchor,
         attributes=AppointmentAttributes(
-            provider=provider,
+            parties=parties,
             occurred_on=occurred_on,
             scheduled_for_date=scheduled_for_date,
             scheduled_notice_date=scheduled_notice_date,
@@ -174,17 +220,17 @@ def _appt(
 
 
 def test_marker_unknown_and_llm_attended_merge_to_attended() -> None:
-    """The integration the design doc cares about: Marker emits a
-    past visit with status=unknown; LLM emits the same visit with
-    status=attended. They merge and the result is attended."""
+    """Marker emits a past visit with status=unknown; LLM emits the
+    same visit with status=attended. They merge on (claim, date,
+    party-overlap) and the result is attended."""
     marker = _appt(
-        provider="Dr. Harmon",
+        parties=("Dr. Harmon",),
         occurred_on=date(2025, 11, 14),
         status="unknown",
         eid="marker",
     )
     llm = _appt(
-        provider="Dr. Harmon",
+        parties=("Dr. Harmon",),
         occurred_on=date(2025, 11, 14),
         status="attended",
         eid="llm",
@@ -198,15 +244,18 @@ def test_marker_unknown_and_llm_attended_merge_to_attended() -> None:
 
 
 def test_status_precedence_attended_beats_scheduled() -> None:
+    """Scheduled-for 6/1 + attended-on 6/1: same encounter_date,
+    overlapping party → merge to attended."""
     a = _appt(
-        provider="Dr. X",
+        parties=("Dr. X",),
         scheduled_for_date=date(2025, 6, 1),
         status="scheduled",
         eid="a",
     )
     b = _appt(
-        provider="Dr. X",
-        occurred_on=date(2025, 6, 2),
+        parties=("Dr. X",),
+        scheduled_for_date=date(2025, 6, 1),
+        occurred_on=date(2025, 6, 1),
         status="attended",
         eid="b",
     )
@@ -217,13 +266,14 @@ def test_status_precedence_attended_beats_scheduled() -> None:
 
 def test_missed_beats_scheduled_but_not_attended() -> None:
     a = _appt(
-        provider="Dr. X",
+        parties=("Dr. X",),
         scheduled_for_date=date(2025, 6, 1),
         status="missed",
         eid="a",
     )
     b = _appt(
-        provider="Dr. X",
+        parties=("Dr. X",),
+        scheduled_for_date=date(2025, 6, 1),
         occurred_on=date(2025, 6, 1),
         status="attended",
         eid="b",
@@ -233,48 +283,56 @@ def test_missed_beats_scheduled_but_not_attended() -> None:
     assert merged.attributes.status == "attended"
 
 
-def test_different_providers_do_not_merge() -> None:
+def test_different_parties_do_not_merge() -> None:
     a = _appt(
-        provider="Dr. Harmon",
+        parties=("Dr. Harmon",),
         occurred_on=date(2025, 6, 1),
         status="attended",
         eid="a",
     )
     b = _appt(
-        provider="Dr. Vega",
+        parties=("Dr. Vega",),
         occurred_on=date(2025, 6, 1),
+        status="attended",
+        eid="b",
+    )
+    # Same claim, same date, but parties disjoint → two events.
+    assert len(resolve_appointments([a, b])) == 2
+
+
+def test_different_dates_do_not_merge_under_exact_rule() -> None:
+    """DD-016: the ±N day window is gone. Same person, dates one
+    day apart, no scheduled_for to anchor — these are two visits."""
+    a = _appt(
+        parties=("Dr. Harmon",),
+        occurred_on=date(2025, 6, 1),
+        status="attended",
+        eid="a",
+    )
+    b = _appt(
+        parties=("Dr. Harmon",),
+        occurred_on=date(2025, 6, 2),
         status="attended",
         eid="b",
     )
     assert len(resolve_appointments([a, b])) == 2
 
 
-def test_outside_window_does_not_merge() -> None:
+def test_schedule_and_seen_pair_on_exact_date_merge() -> None:
+    """Q4 hot path: a scheduled-for-6/1 event and an attended-on-6/1
+    event with overlapping parties merge into a single visit with
+    both date fields populated."""
     a = _appt(
-        provider="Dr. Harmon",
-        occurred_on=date(2025, 6, 1),
-        status="attended",
-        eid="a",
-    )
-    b = _appt(
-        provider="Dr. Harmon",
-        occurred_on=date(2025, 6, 20),  # 19 days later — separate visit
-        status="attended",
-        eid="b",
-    )
-    assert len(resolve_appointments([a, b])) == 2
-
-
-def test_within_window_merges() -> None:
-    a = _appt(
-        provider="Dr. Harmon",
+        parties=("Dr. Harmon",),
         scheduled_for_date=date(2025, 6, 1),
+        scheduled_notice_date=date(2025, 5, 15),
         status="scheduled",
         eid="a",
     )
     b = _appt(
-        provider="Dr. Harmon",
-        occurred_on=date(2025, 6, 4),  # 3 days drift, well inside window
+        parties=("Dr. Harmon",),
+        scheduled_for_date=date(2025, 6, 1),
+        occurred_on=date(2025, 6, 1),
         status="attended",
         eid="b",
     )
@@ -282,21 +340,94 @@ def test_within_window_merges() -> None:
     assert isinstance(merged.attributes, AppointmentAttributes)
     assert merged.attributes.status == "attended"
     assert merged.attributes.scheduled_for_date == date(2025, 6, 1)
-    assert merged.attributes.occurred_on == date(2025, 6, 4)
+    assert merged.attributes.occurred_on == date(2025, 6, 1)
+    assert merged.attributes.scheduled_notice_date == date(2025, 5, 15)
+
+
+def test_empty_parties_does_not_block_merge() -> None:
+    """DD-016 empty-side escape hatch. Marker emits a date with no
+    Provider: line nearby (`parties=()`); the LLM emits the same
+    encounter with the doctor named. Date matches → merge."""
+    marker = _appt(
+        parties=(),
+        scheduled_for_date=date(2025, 6, 1),
+        scheduled_notice_date=date(2025, 5, 15),
+        status="scheduled",
+        eid="marker",
+    )
+    llm = _appt(
+        parties=("Dr. Harmon",),
+        scheduled_for_date=date(2025, 6, 1),
+        occurred_on=date(2025, 6, 1),
+        status="attended",
+        eid="llm",
+        method="llm",
+    )
+    [merged] = resolve_appointments([marker, llm])
+    assert isinstance(merged.attributes, AppointmentAttributes)
+    assert merged.attributes.status == "attended"
+    assert merged.attributes.parties == ("Dr. Harmon",)
+
+
+def test_person_and_office_variant_merge() -> None:
+    """The fragmentation case from the verification audit:
+    `Dr. Harmon` and `Dr. Harmon's office` are the same person.
+    The LLM strips the location suffix and emits 'Harmon' both
+    times; under the new rule they overlap and merge."""
+    a = _appt(
+        parties=("Harmon",),
+        occurred_on=date(2025, 4, 11),
+        status="attended",
+        eid="a",
+    )
+    b = _appt(
+        parties=("Harmon", "Orthopedic & Spine Associates"),
+        occurred_on=date(2025, 4, 11),
+        status="attended",
+        eid="b",
+    )
+    [merged] = resolve_appointments([a, b])
+    assert isinstance(merged.attributes, AppointmentAttributes)
+    # Union of parties, deduped by normalized form.
+    assert "Orthopedic & Spine Associates" in merged.attributes.parties
+    assert "Harmon" in merged.attributes.parties
+
+
+def test_cross_org_doctor_overlap_via_org() -> None:
+    """When one note lists doctor + clinic and another lists only
+    the clinic for the same date, set overlap on the clinic carries
+    the merge."""
+    a = _appt(
+        parties=("Caldwell", "Spine & Neurology Group"),
+        scheduled_for_date=date(2025, 4, 22),
+        scheduled_notice_date=date(2025, 3, 26),
+        status="scheduled",
+        eid="a",
+    )
+    b = _appt(
+        parties=("Spine and Neurology Group",),
+        scheduled_for_date=date(2025, 4, 22),
+        occurred_on=date(2025, 4, 22),
+        status="attended",
+        eid="b",
+    )
+    [merged] = resolve_appointments([a, b])
+    assert isinstance(merged.attributes, AppointmentAttributes)
+    assert merged.attributes.status == "attended"
 
 
 def test_latest_scheduled_notice_date_wins() -> None:
     """Q4 §5: reschedules — the most-recent notice anchors the
     Q4 gap math; earlier notices stay in history but don't feed."""
     first_notice = _appt(
-        provider="Dr. X",
+        parties=("Dr. X",),
         scheduled_for_date=date(2025, 6, 5),
         scheduled_notice_date=date(2025, 5, 1),
         status="scheduled",
         eid="a",
     )
     reschedule_notice = _appt(
-        provider="Dr. X",
+        parties=("Dr. X",),
         scheduled_for_date=date(2025, 6, 5),
         scheduled_notice_date=date(2025, 5, 20),
         status="scheduled",
@@ -307,29 +438,31 @@ def test_latest_scheduled_notice_date_wins() -> None:
     assert merged.attributes.scheduled_notice_date == date(2025, 5, 20)
 
 
-def test_longer_provider_form_preferred() -> None:
+def test_longer_surface_form_preferred_per_identity() -> None:
+    """When two events share a normalized party (`harmon`), the
+    longer surface form wins as the display label."""
     short = _appt(
-        provider="Harmon",
+        parties=("Harmon",),
         occurred_on=date(2025, 6, 1),
         status="attended",
         eid="a",
     )
     long = _appt(
-        provider="Dr. Harmon, MD",
+        parties=("Dr. Harmon, MD",),
         occurred_on=date(2025, 6, 1),
         status="attended",
         eid="b",
     )
     [merged] = resolve_appointments([short, long])
     assert isinstance(merged.attributes, AppointmentAttributes)
-    assert merged.attributes.provider == "Dr. Harmon, MD"
+    assert merged.attributes.parties == ("Dr. Harmon, MD",)
 
 
 def test_single_event_passes_through_unchanged() -> None:
     [ev] = resolve_appointments(
         [
             _appt(
-                provider="Dr. X",
+                parties=("Dr. X",),
                 occurred_on=date(2025, 1, 1),
                 status="attended",
                 eid="solo",
@@ -363,9 +496,6 @@ def _rtw_event(
 
 
 def test_rtw_identical_events_merge() -> None:
-    """Same claim, same date, same duty_type → one merged event.
-    This catches the future-dated-confirmation + later-summary
-    pattern observed in the corpus."""
     a = _rtw_event(date(2025, 11, 10), role="scheduling coordinator", eid="a")
     b = _rtw_event(date(2025, 11, 10), role="scheduling coordinator", eid="b")
     [merged] = resolve_rtw([a, b])
@@ -374,8 +504,6 @@ def test_rtw_identical_events_merge() -> None:
 
 
 def test_rtw_different_dates_do_not_merge() -> None:
-    """A modified return on 11/10 and a full return on 1/5 are
-    distinct events; both should survive."""
     a = _rtw_event(date(2025, 11, 10), "modified", eid="a")
     b = _rtw_event(date(2026, 1, 5), "full", eid="b")
     assert len(resolve_rtw([a, b])) == 2
@@ -401,7 +529,7 @@ def test_resolve_dispatches_per_event_type() -> None:
     events = [
         _reserve_event("Indemnity (2) Lost Time", Decimal("100"), 1),
         _appt(
-            provider="Dr. X",
+            parties=("Dr. X",),
             occurred_on=date(2025, 6, 1),
             status="attended",
             eid="a",

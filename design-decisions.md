@@ -26,6 +26,7 @@ was rejected** — so the reasoning is traceable, not just the outcome.
 | DD-013 | Normalizer parses header dates into typed fields; body text preserved verbatim | Accepted | 2026-05-23 |
 | DD-014 | LLM extractors retry transient failures up to 3 attempts with backoff, then drop+warn | Accepted | 2026-05-23 |
 | DD-015 | Per-note extraction is parallelized across notes (default 4 workers, threads, --workers configurable) | Accepted | 2026-05-23 |
+| DD-016 | Appointment identity is `(claim_id, encounter_date, party-overlap)`; LLM emits a `parties` list, no string fuzzy matching | Accepted | 2026-05-23 |
 
 ---
 
@@ -533,6 +534,214 @@ on a single note, not through the parallel orchestrator, so they
 are unaffected.
 
 ---
+
+## DD-016 — Appointment identity is `(claim_id, encounter_date, party-overlap)`; LLM emits a `parties` list
+**Status:** Accepted · **Date:** 2026-05-23
+
+**Context.** The Phase 12 verification audit surfaced a class of
+resolver bugs all rooted in one place: `AppointmentAttributes.provider`
+was a single free-form string carrying two distinct concepts (the
+clinician *and* the facility) into a regex-based canonicalizer that
+had to guess which one it was looking at. Concrete fallout:
+
+- `"Dr. Harmon"` and `"Dr. Harmon's office"` canonicalized to
+  different keys (`"harmon"` vs `"office"`), so the same encounter
+  fragmented into two Q2 rows.
+- Generic phrases (`"office"`, `"my office"`, `"ophthalmology"`)
+  survived as standalone "providers" and inflated Q2 counts.
+- Same provider with multiple visits in a `±N day` window merged the
+  wrong scheduled/attended pair (Q4 negative-lag outliers).
+
+Patching the regex (strip `'s office`, add stop-word lists) closes
+specific cases but does not address the structural cause: **string
+canonicalization is the wrong tool for entity resolution**, and the
+schema field forces the LLM to discard information by picking one
+party when an encounter has multiple.
+
+**Decision.** Three coordinated changes:
+
+1. **Schema.** Replace `AppointmentAttributes.provider: str | None`
+   with `parties: list[str]` — every named individual *and* every
+   named organization/facility involved in the encounter, as a set
+   of strings. Empty list = no identifiable party.
+
+2. **LLM contract.** The Appointment extractor's prompt is rewritten
+   around a bounded definition of "party":
+
+   > Emit, in `parties`, every named individual or organization that is
+   > **party to this specific appointment** — attending clinician(s),
+   > the facility/clinic where the appointment occurs, and any case
+   > manager/interpreter physically present. Do **not** include:
+   > referring physicians named only in history, other clinicians
+   > mentioned in diagnosis or plan, specialty names
+   > (`"ophthalmology"`, `"spine surgery"`), or generic phrases
+   > (`"office"`, `"clinic"`, `"the doctor"`).
+   >
+   > Each entry names one entity. Strip honorifics, location suffixes
+   > (`'s office`, `at <X>`), and degree suffixes before emitting.
+
+3. **Resolver merge key.** Two appointment events merge iff:
+
+   ```
+   same claim_id
+   AND same encounter_date           (exact match; no ±N window)
+   AND parties_overlap(a, b)          (≥1 shared entity, or either side empty)
+   ```
+
+   `encounter_date = scheduled_for_date or occurred_on`. Party
+   comparison uses **deterministic normalization** (lowercase,
+   collapse whitespace, strip remaining honorifics/degree suffixes,
+   `&` → `and`) and **exact set intersection**. No fuzzy matching,
+   no edit distance, no probability threshold.
+
+**Why.**
+
+- **Removes the fragmentation class entirely.** `"Dr. Harmon"`,
+  `"Dr. Harmon's office"`, and `"Harmon at Orthopedic & Spine"` all
+  emit `"Harmon"` in `parties` (the LLM strips suffixes with full
+  note context). Any cross-note reference that names either Dr. Harmon
+  or the same clinic will overlap and merge. The previous design
+  couldn't do this because a single field can't carry two concepts.
+
+- **Captures the multi-party reality of clinical encounters.** An
+  appointment has a clinician *and* a clinic *and* sometimes an FCM
+  in attendance. Different notes surface different subsets. A set
+  with overlap as the match rule lets notes share *any* identifier
+  to be recognized as the same encounter — strict win over forcing
+  a single canonical party.
+
+- **Pushes disambiguation upstream, to where the context lives.**
+  The LLM is reading the whole note when it decides whether
+  `"Dr. Harmon's office"` is Harmon-the-person or a place called
+  "office". The resolver, looking only at the extracted string,
+  never had that context — every heuristic it ran was guesswork.
+  Now the LLM commits to the parties; the resolver compares them
+  deterministically.
+
+- **Exact date + party overlap kills the cross-date false-merge bug
+  for free.** The `±N day` window existed to absorb date-parsing
+  fuzz, but it was also absorbing Marker mis-attributions (a
+  historical "Next Office Visit: 4-17-25" in a July note merging
+  with an April MRI). Replacing the window with exact equality
+  ejects these. Date-format ambiguity belongs in the Normalizer
+  (DD-013), not the resolver.
+
+- **No fuzzy / similarity matching.** Surnames are short (6–8
+  chars); 75% edit-similarity merges `"Harmon"` and `"Harman"`.
+  Org names share boilerplate (`"Group"`, `"Center"`); 75%
+  similarity merges `"Spine Surgery Group"` and `"Spine &
+  Neurology Group"`. Fuzzy matching fails *silently* (downstream
+  query produces a wrong number with no signal); exact match
+  fails *loudly* (a visible duplicate row that can be diagnosed).
+  In a system whose correctness story rests on `evidence_quote`
+  substring checks (DD-013), giving up determinism at the merge
+  step undermines the chain of custody. Residual same-entity
+  variants that survive deterministic normalization are handled by
+  an **explicit alias table** (deferred until needed), not by a
+  probability threshold.
+
+- **The set-empty escape hatch keeps coverage high.** When either
+  side has `parties = []` (e.g. the Marker extractor saw only a
+  date), party overlap doesn't *block* the merge — date alone
+  carries it. Q4's schedule-to-seen pairing depends on this:
+  the booking note often names the doctor, the attending note
+  often names only the clinic; either may be empty, both merge by
+  date.
+
+**Rejected.**
+
+- *Regex band-aid on `canonicalize_provider`* — strip `'s office`,
+  add stop-word list. Fixes the visible cases, leaves the structural
+  cause (one field, two concepts; resolver doing string heuristics
+  without context) intact. Next surface variation reproduces the bug.
+
+- *Single `attending_party` (priority: person > org > null)* —
+  cleaner than the regex approach, but **forces the LLM to discard
+  information**. When Note A names the doctor and Note B names only
+  the clinic for the same encounter, the chosen canonical party
+  differs and they don't merge. Set-with-overlap dominates this
+  design on coverage with no precision cost.
+
+- *Fuzzy string matching (75% Levenshtein, Jaro-Winkler, etc.)* —
+  see "no fuzzy matching" above. Surname / org-name collision rates
+  at any reasonable threshold are too high; silent failures are
+  worse than visible duplicates; deterministic normalization plus an
+  alias table covers the legitimate cases.
+
+- *`±N day` proximity window on `encounter_date`* — was load-bearing
+  in the previous resolver and was responsible for the Q4 negative-
+  lag outliers (`−113d`, `−177d`). Exact equality is correct;
+  date-interpretation noise belongs in the Normalizer's date parser,
+  not in the resolver's merge logic.
+
+- *Provider as a first-class `Provider` entity with persistent IDs +
+  resolver stage that runs before appointments* — the correct
+  long-term answer for a production system (Wikidata-style entity
+  resolution: learn aliases over time, IDs not strings), but
+  out of scope for this exercise. The `parties` list with explicit
+  aliases is a clean step in that direction — when the alias table
+  starts to hurt, promoting it to a `Provider` table is purely
+  additive.
+
+**Consequences.**
+
+- `provider.py` collapses from the `_is_person()` classifier to a
+  deterministic `normalize()` (~10 lines). Renamed to `parties.py`.
+- `appointments.py` `_should_merge` becomes ~10 lines: claim
+  equality, date equality, set-overlap check. No window parameter.
+- LLM prompt rewritten with the bounded "parties" definition above;
+  schema field renamed.
+- Marker extractor emits its captured provider string (or empty)
+  as a single-element `parties` list.
+- Q2 output: per-row `parties: list[str]` field; the display string
+  picks the longest party from the set if a single label is needed.
+- Q4 unaffected at the function level — already keys on
+  `scheduled_for_date`/`occurred_on`; benefits indirectly from
+  cleaner upstream merges.
+- The provider canonicalization fragmentation, the generic-string
+  false-positive class, and the cross-date false-merge class (issues
+  #1, #2, #3, #4, #5, #7 in the post-verification audit) collapse
+  to a single root-cause fix. Status-precedence-demotion (#5b) and
+  negation-reconciliation (#6) remain as separate, narrower issues.
+
+**Known residual failure mode.** Two different clinicians who happen
+to see the same claimant at the **same facility on the same date**
+will be merged incorrectly. Concretely: if Note A describes a visit
+on 4/22 with `parties = ["Caldwell", "Spine & Neurology Group"]` and
+Note B describes a separate same-day visit at the same practice with
+`parties = ["Farano", "Spine & Neurology Group"]`, the merge key
+matches (same claim, same `encounter_date`, overlap on
+`"Spine & Neurology Group"`) and the two encounters collapse into
+one.
+
+This is the price of using set-overlap as a tie-rule: a *shared*
+party (the facility) is sufficient evidence even when the *clinician*
+differs. The same-day-multi-clinician-at-one-practice pattern is the
+case where this rule misfires.
+
+Why we accept it for the MVP:
+- It does not occur in either of the two sample claims, and the
+  pattern is rare in single-claim corpora (a patient seeing two
+  different specialists on the same day at one practice is unusual
+  outside hospital inpatient stays).
+- The visible artifact is an undercount, not a wrong-merge of
+  unrelated events — both real encounters are present in the merged
+  record's `parties`, so the loss is *one Q2 row*, not the contents
+  of one.
+- The fix is local and additive when it becomes necessary: tighten
+  the overlap rule from "any shared party" to "shared **person**
+  party" (`{p for p in a.parties if is_person(p)} & {…}`), with the
+  facility treated as confirming evidence rather than identifying
+  evidence. Defer this until a real corpus shows the pattern matters.
+
+The contrast worth keeping in mind: the **fuzzy-string** failure
+mode (`"Harmon"` collapsing with `"Harman"`) was *silent and
+unbounded* — any two notes with similar provider strings might
+merge, with no way to predict which. The **same-facility-same-day**
+failure mode is *bounded* (must be same claim, same date, same
+practice) and *inspectable* (the merged event's `parties` lists
+both clinicians, so an auditor sees the collapse). Bounded-and-
+visible is acceptable; unbounded-and-silent is not.
 
 <!-- Append new decisions below this line. Template:
 

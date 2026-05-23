@@ -84,7 +84,7 @@ def test_events_round_trip_all_types(conn: Connection) -> None:
             event_type="appointment",
             event_date=date(2025, 9, 15),
             attributes=AppointmentAttributes(
-                provider="Dr. Caldwell",
+                parties=("Caldwell", "Spine & Neurology Group"),
                 specialty="neurosurgery",
                 scheduled_notice_date=date(2025, 8, 29),
                 scheduled_for_date=date(2025, 9, 15),

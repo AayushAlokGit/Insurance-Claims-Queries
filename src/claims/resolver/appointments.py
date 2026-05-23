@@ -1,10 +1,48 @@
-"""Appointment resolution. See resolver.md §3 Pass 2-3 + §6.
+"""Appointment resolution. See docs/resolver.md §3 + DD-016.
 
-Two events merge if they describe the same encounter — same
-claim, same canonical provider, anchor dates within a small
-window. The Marker extractor's status="unknown" past visits get
-promoted to "attended"/"missed"/"cancelled" when an LLM-emitted
-event in the same window provides that evidence.
+Two events describe the same encounter iff:
+    same claim_id
+    AND same encounter_date           (exact match, no ±N window)
+    AND parties_overlap(a, b)         (≥1 shared party, OR either
+                                       side has no identifiable
+                                       parties)
+
+`encounter_date = scheduled_for_date or occurred_on` — the stable
+calendar slot for the appointment. The previous design used a
+±N day window with `canonicalize_provider`; DD-016 explains why
+both went away (window absorbed Marker mis-attributions and
+produced cross-date false merges; canonicalization was string
+heuristics doing entity resolution badly).
+
+KNOWN FAILURE MODE (DD-016, intentional). One claimant sees two
+DIFFERENT clinicians at the SAME facility on the SAME day:
+
+    Note A: parties = ["Caldwell", "Spine & Neurology Group"]
+    Note B: parties = ["Farano",   "Spine & Neurology Group"]
+    encounter_date = 4/22 for both
+
+The overlap on the shared facility ("Spine & Neurology Group")
+satisfies `parties_overlap` and the two events MERGE into one,
+even though they are clinically two separate encounters with two
+different doctors. The merged event's `parties` list will contain
+BOTH clinicians, so the collapse is auditable rather than silent
+— but Q2 will undercount attended appointments by 1 and Q4 will
+pair the wrong (schedule, seen) dates if both encounters had
+scheduling events.
+
+Why we accept this for now:
+- Does not occur in either of the two sample claims.
+- Pattern is rare outside hospital inpatient days (same-day multi-
+  specialist visits at one practice).
+- The Q2 / Q4 artifact (one undercount, both doctors still listed
+  in `parties`) is inspectable, not silent.
+
+If/when a corpus shows this pattern matters, the local fix is in
+`parties.py::parties_overlap` — tighten the rule from "any shared
+party" to "shared PERSON party", treating facilities as confirming
+evidence only. Search for "DD-016 same-facility-same-day failure
+mode" if you arrive at this comment because a real-world
+encounter just collapsed.
 
 Status precedence (resolver.md §3, Pass 3):
     attended > missed > cancelled > scheduled > unknown
@@ -13,15 +51,10 @@ Status precedence (resolver.md §3, Pass 3):
 from __future__ import annotations
 
 import uuid
-from datetime import date, timedelta
+from datetime import date
 
 from claims.models import AppointmentAttributes, AppointmentStatus, Event
-from claims.resolver.provider import canonicalize_provider
-
-# Q2 dedup window. Q4 schedule-to-seen wants N=14 (the design
-# doc's "two strategies registered" point); we'll register that
-# strategy separately once Q4's query layer needs it.
-_DEFAULT_WINDOW_DAYS = 7
+from claims.resolver.parties import normalize_party, parties_overlap
 
 _STATUS_RANK: dict[AppointmentStatus, int] = {
     "attended": 4,
@@ -32,29 +65,28 @@ _STATUS_RANK: dict[AppointmentStatus, int] = {
 }
 
 
-def _anchor_date(attrs: AppointmentAttributes) -> date | None:
-    """resolver.md §3: anchor = scheduled_for_date ?? occurred_on."""
+def _encounter_date(attrs: AppointmentAttributes) -> date | None:
     return attrs.scheduled_for_date or attrs.occurred_on
 
 
-def _should_merge(a: Event, b: Event, window_days: int) -> bool:
+def _should_merge(a: Event, b: Event) -> bool:
+    """DD-016 merge key."""
     if a.claim_id != b.claim_id:
         return False
     a_attrs = a.attributes
     b_attrs = b.attributes
     assert isinstance(a_attrs, AppointmentAttributes)
     assert isinstance(b_attrs, AppointmentAttributes)
-    if canonicalize_provider(a_attrs.provider) != canonicalize_provider(
-        b_attrs.provider
-    ):
+    a_date = _encounter_date(a_attrs)
+    b_date = _encounter_date(b_attrs)
+    if a_date is None or b_date is None:
+        # No date on at least one side — can't anchor the merge.
+        # Fall back to party overlap only (rare; mostly the LLM
+        # extractor emitting an undated past visit).
+        return parties_overlap(a_attrs.parties, b_attrs.parties)
+    if a_date != b_date:
         return False
-    a_anchor = _anchor_date(a_attrs)
-    b_anchor = _anchor_date(b_attrs)
-    if a_anchor is None or b_anchor is None:
-        # Without an anchor we can't tell — fall back to claim+provider
-        # equality. Conservative; could be tightened later.
-        return True
-    return abs((a_anchor - b_anchor).days) <= window_days
+    return parties_overlap(a_attrs.parties, b_attrs.parties)
 
 
 def _stronger_status(
@@ -63,10 +95,37 @@ def _stronger_status(
     return a if _STATUS_RANK[a] >= _STATUS_RANK[b] else b
 
 
+def _merge_parties(events: list[Event]) -> tuple[str, ...]:
+    """Union of all parties across the merged events, deduped by
+    normalized form, preserving first-seen order so output is
+    stable. The longest surface form wins as the canonical display
+    string for each normalized key (so `"Dr. Harmon's office"`
+    beats bare `"Harmon"` for display purposes — same normalized
+    identity, more informative label)."""
+    by_norm: dict[str, str] = {}
+    order: list[str] = []
+    for ev in events:
+        attrs = ev.attributes
+        assert isinstance(attrs, AppointmentAttributes)
+        for p in attrs.parties:
+            n = normalize_party(p)
+            if n is None:
+                continue
+            existing = by_norm.get(n)
+            if existing is None:
+                by_norm[n] = p
+                order.append(n)
+            elif len(p) > len(existing):
+                by_norm[n] = p
+    return tuple(by_norm[n] for n in order)
+
+
 def _merge(events: list[Event]) -> Event:
-    """Combine a group of events that all describe the same
-    appointment. Status follows precedence; date fields union;
-    provider takes the longest available form."""
+    """Combine events that all describe the same appointment.
+    Status takes the strongest; date fields union (first non-null);
+    parties union (longest surface form per normalized identity);
+    scheduled_notice_date takes the latest (reschedule semantics —
+    resolver.md §5)."""
     first = events[0]
     base_attrs = first.attributes
     assert isinstance(base_attrs, AppointmentAttributes)
@@ -75,7 +134,6 @@ def _merge(events: list[Event]) -> Event:
     occurred_on = base_attrs.occurred_on
     scheduled_for_date = base_attrs.scheduled_for_date
     scheduled_notice_date = base_attrs.scheduled_notice_date
-    provider = base_attrs.provider
     specialty = base_attrs.specialty
     appointment_type = base_attrs.appointment_type
 
@@ -87,22 +145,16 @@ def _merge(events: list[Event]) -> Event:
         scheduled_for_date = (
             scheduled_for_date or attrs.scheduled_for_date
         )
-        # Latest scheduled_notice_date wins (reschedules — Q4 §5).
         if attrs.scheduled_notice_date is not None and (
             scheduled_notice_date is None
             or attrs.scheduled_notice_date > scheduled_notice_date
         ):
             scheduled_notice_date = attrs.scheduled_notice_date
-        # Most specific provider form (longest string).
-        if attrs.provider and (
-            provider is None or len(attrs.provider) > len(provider)
-        ):
-            provider = attrs.provider
         specialty = specialty or attrs.specialty
         appointment_type = appointment_type or attrs.appointment_type
 
     merged_attrs = AppointmentAttributes(
-        provider=provider,
+        parties=_merge_parties(events),
         specialty=specialty,
         scheduled_notice_date=scheduled_notice_date,
         scheduled_for_date=scheduled_for_date,
@@ -110,8 +162,6 @@ def _merge(events: list[Event]) -> Event:
         status=status,
         appointment_type=appointment_type,
     )
-    # event_date follows the storage convention from data-modeling
-    # §4.2: occurred_on if set, else scheduled_for_date.
     event_date = (
         merged_attrs.occurred_on
         or merged_attrs.scheduled_for_date
@@ -130,12 +180,11 @@ def _merge(events: list[Event]) -> Event:
     )
 
 
-def resolve_appointments(
-    events: list[Event], *, window_days: int = _DEFAULT_WINDOW_DAYS
-) -> list[Event]:
-    """Group appointment events by (claim, canonical_provider,
-    anchor_date ± window_days) and merge each group. Quadratic
-    in group size; fine for per-claim batches in this corpus.
+def resolve_appointments(events: list[Event]) -> list[Event]:
+    """Group appointment events by the DD-016 merge key and
+    merge each group. Quadratic in per-claim group size — fine for
+    the corpus scale we care about. Per-claim batches keep the
+    inner loop small.
     """
     by_claim: dict[str, list[Event]] = {}
     for ev in events:
@@ -145,10 +194,11 @@ def resolve_appointments(
 
     out: list[Event] = []
     for claim_events in by_claim.values():
-        # Sort by anchor so the earliest seeds each group.
+        # Sort by encounter_date so the earliest seeds each group
+        # — gives stable output order across runs.
         claim_events.sort(
             key=lambda e: (
-                _anchor_date(e.attributes)  # type: ignore[arg-type]
+                _encounter_date(e.attributes)  # type: ignore[arg-type]
                 or e.event_date,
                 e.event_id,
             )
@@ -157,7 +207,7 @@ def resolve_appointments(
         for ev in claim_events:
             placed = False
             for cluster in clusters:
-                if _should_merge(cluster[0], ev, window_days):
+                if _should_merge(cluster[0], ev):
                     cluster.append(ev)
                     placed = True
                     break

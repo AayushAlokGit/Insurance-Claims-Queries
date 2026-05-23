@@ -161,7 +161,7 @@ def test_q2_counts_only_attended(conn: Connection) -> None:
                 event_date=date(2025, 6, i + 1),
                 attributes=AppointmentAttributes(
                     status=status,  # type: ignore[arg-type]
-                    provider=f"Dr. {status[0].upper()}",
+                    parties=(f"Dr. {status[0].upper()}",),
                 ),
                 extraction_method="llm",
             ),
@@ -236,7 +236,7 @@ def test_q4_per_visit_and_distribution(conn: Connection) -> None:
                 event_date=occurred,
                 attributes=AppointmentAttributes(
                     status="attended",
-                    provider="Dr. X",
+                    parties=("Dr. X",),
                     scheduled_notice_date=notice,
                     scheduled_for_date=booked,
                     occurred_on=occurred,
@@ -267,7 +267,7 @@ def test_q4_skips_visits_missing_dates(conn: Connection) -> None:
             event_date=date(2025, 6, 1),
             attributes=AppointmentAttributes(
                 status="attended",
-                provider="Dr. X",
+                parties=("Dr. X",),
                 occurred_on=date(2025, 6, 1),
                 # scheduled_notice_date missing — can't compute lag
             ),

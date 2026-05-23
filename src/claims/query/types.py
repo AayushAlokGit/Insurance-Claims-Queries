@@ -44,10 +44,16 @@ Q1Result = Annotated[
 
 
 class Q2Appointment(BaseModel):
+    """One attended appointment in the Q2 result. `parties` is the
+    DD-016 set of named entities (clinicians + facility) extracted
+    for this encounter; preserved as a list rather than collapsed
+    to a single label so the consumer can see both the doctor and
+    the clinic when both were named."""
+
     model_config = ConfigDict(frozen=True)
     date: date
     status: Literal["attended"] = "attended"
-    provider: str | None
+    parties: list[str]
     specialty: str | None
     appointment_type: str | None
 
@@ -86,8 +92,13 @@ class Q3Result(BaseModel):
 
 
 class Q4Visit(BaseModel):
+    """One merged scheduled-and-seen visit. `parties` carries the
+    DD-016 set; null/empty means the merge happened on date alone
+    (the schedule note named no party, the visit note named no
+    party, or both)."""
+
     model_config = ConfigDict(frozen=True)
-    provider: str | None
+    parties: list[str]
     scheduled_notice_date: date
     scheduled_for_date: date
     occurred_on: date

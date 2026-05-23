@@ -80,16 +80,22 @@ class AppointmentMarkerExtractor:
             event_date = date.fromisoformat(parsed.iso)
             provider = _find_provider(note.body, m.end())
 
+            # DD-016: Marker sees only a templated header. If a
+            # `Provider:` / `Name of physician:` line sits nearby,
+            # promote it to a single-entry parties tuple; otherwise
+            # leave empty and let date alone carry the merge.
+            parties: tuple[str, ...] = (provider,) if provider else ()
+
             if _scheduled_marker(m.group("marker")):
                 attrs = AppointmentAttributes(
-                    provider=provider,
+                    parties=parties,
                     scheduled_notice_date=note.note_date,
                     scheduled_for_date=event_date,
                     status="scheduled",
                 )
             else:
                 attrs = AppointmentAttributes(
-                    provider=provider,
+                    parties=parties,
                     occurred_on=event_date,
                     status="unknown",
                 )

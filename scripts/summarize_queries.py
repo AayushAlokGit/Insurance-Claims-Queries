@@ -47,11 +47,15 @@ def main() -> int:
 
     q2 = q2_appointments_attended(conn, args.claim_id)
     print(f"\nQ2: attended count = {q2.count}")
-    providers = {}
+    # Display each distinct party (across all attended appts) with
+    # its incidence count. DD-016: an appointment can list multiple
+    # parties; count each.
+    parties: dict[str, int] = {}
     for a in q2.appointments:
-        providers[a.provider] = providers.get(a.provider, 0) + 1
-    for provider, n in sorted(providers.items(), key=lambda x: -x[1]):
-        print(f"  {provider!r}: {n}")
+        for p in a.parties or ["<no party>"]:
+            parties[p] = parties.get(p, 0) + 1
+    for p, n in sorted(parties.items(), key=lambda x: -x[1]):
+        print(f"  {p!r}: {n}")
 
     q3 = q3_reserve_changes(conn, args.claim_id)
     print("\nQ3: reserve changes")
@@ -68,8 +72,9 @@ def main() -> int:
     )
     print("  per-visit lags (sorted):")
     for v in sorted(q4.per_visit, key=lambda v: v.lag_days):
+        parties_str = ", ".join(v.parties) if v.parties else "<no party>"
         print(
-            f"    {v.provider!r:35s} notice={v.scheduled_notice_date} "
+            f"    {parties_str!r:50s} notice={v.scheduled_notice_date} "
             f"booked={v.scheduled_for_date} occurred={v.occurred_on} "
             f"lag={v.lag_days}d"
         )

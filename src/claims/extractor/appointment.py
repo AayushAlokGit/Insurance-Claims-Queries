@@ -80,7 +80,12 @@ class _ExtractedAppointment(BaseModel):
     `appointment_date` is the date the appointment occurred or
     is set to occur (NOT the note's own date). `evidence_quote`
     must be a verbatim substring of the note body — extractor
-    drops any candidate that fails the check."""
+    drops any candidate that fails the check.
+
+    `parties` per DD-016: a list of every named individual and
+    organization party to *this* appointment, with honorifics
+    and location suffixes stripped. Empty list if no identifiable
+    party appears."""
 
     model_config = ConfigDict(extra="forbid")
 
@@ -93,11 +98,13 @@ class _ExtractedAppointment(BaseModel):
             "Null if the note does not name a date."
         ),
     )
-    provider: str | None = Field(
-        default=None,
+    parties: list[str] = Field(
+        default_factory=list,
         description=(
-            "Provider or clinic name as it appears in the note. "
-            "Null if not mentioned."
+            "Every named individual or organization that is party to "
+            "this specific appointment. Strip honorifics ('Dr.'), "
+            "degree suffixes (', MD'), and location suffixes "
+            "(\"'s office\", 'at <X>'). Empty list if none identifiable."
         ),
     )
     evidence_quote: str = Field(
@@ -137,6 +144,23 @@ DO NOT EXTRACT:
 EVIDENCE_QUOTE is REQUIRED on every entry — a verbatim substring of the body. If you can't find one, don't emit the entry.
 
 DATE: explicit date in the body → `appointment_date`. Definite relative phrase that names a specific day relative to the note date ("yesterday", "today", "this morning", "last Friday") → compute the date from the note date and return it. Vague relative phrase ("recently", "soon", "next month", "in a few weeks") → leave null.
+
+PARTIES — list every named individual and organization that is party to THIS specific appointment:
+- The attending clinician(s) who actually see (or would see) the claimant at this encounter — must be a named person (e.g. "Dr. Harmon"), not a role.
+- The facility / clinic / hospital / practice where the appointment occurs — must be a named org (e.g. "Spine & Neurology Group"), not a generic word.
+- A case manager, field nurse, or interpreter PHYSICALLY PRESENT at the encounter, ONLY if they have a personal name in the note (e.g. "FCM T.W.", "interpreter Maria Lopez"). Never emit generic role labels like "FCM", "field nurse", "TCM", "interpreter", "case manager" on their own.
+
+NOTE: The claimant is never a party to their own appointment for our purposes.
+
+DO NOT put in `parties`:
+- The claimant / injured worker themselves, under any label — including pronouns ("she", "he"), role labels ("claimant", "patient", "EE", "IE", "IW", "HR"), AND pseudonymous proper names used to refer to the claimant ("Patient A", "Patient B", "the IE", "the IW", "Subject", "the subject"). 
+- Referring physicians or providers named only in history / treatment plan / referrals.
+- Other clinicians mentioned only in the diagnosis line.
+- Specialty names ("ophthalmology", "spine surgery", "neurology"). Specialty is not a party.
+- Generic phrases ("office", "clinic", "my office", "the doctor", "the provider", "the field nurse", "the FCM").
+- Unnamed roles: "FCM", "TCM", "field nurse", "case manager", "interpreter" when the note does not give a personal name.
+
+Each entry in `parties` names ONE entity. Strip honorifics (Dr., Mr., Mrs.), degree suffixes (", MD", ", DO", ", PhD"), and location suffixes ("'s office", "at <clinic>"). For example: "Dr. Harmon's office" → emit "Harmon". "Dr. Caldwell at Spine & Neurology Group" → emit two entries: "Caldwell" and "Spine & Neurology Group". "Valley PT Group" → emit "Valley PT Group". A note that reads "I traveled to Dr. Vega's office today with Patient A and our field nurse" → emit just "Vega" (claimant excluded; unnamed field nurse excluded). If no identifiable party is named, emit an empty list — never invent one.
 
 No appointment in the note → return appointments: []. Do not infer status from silence."""
 
@@ -184,16 +208,28 @@ class AppointmentExtractor:
         self, note: Note, appt: _ExtractedAppointment
     ) -> Event:
         event_date = appt.appointment_date or note.note_date
+        # Deduplicate parties at construction time — LLMs
+        # occasionally repeat the same entity in different surface
+        # forms within one entry. Preserve order for stability.
+        seen: set[str] = set()
+        parties: list[str] = []
+        for p in appt.parties:
+            stripped = p.strip()
+            if not stripped or stripped.lower() in seen:
+                continue
+            seen.add(stripped.lower())
+            parties.append(stripped)
+
         if appt.status == "scheduled":
             attrs = AppointmentAttributes(
-                provider=appt.provider,
+                parties=tuple(parties),
                 scheduled_notice_date=note.note_date,
                 scheduled_for_date=appt.appointment_date,
                 status="scheduled",
             )
         else:
             attrs = AppointmentAttributes(
-                provider=appt.provider,
+                parties=tuple(parties),
                 occurred_on=appt.appointment_date,
                 status=appt.status,
             )

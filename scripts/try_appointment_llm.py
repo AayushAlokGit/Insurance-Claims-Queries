@@ -122,9 +122,10 @@ def main() -> int:
             occurred = attrs.occurred_on
             scheduled = attrs.scheduled_for_date
             date_str = occurred or scheduled or "—"
+            parties_str = ", ".join(attrs.parties) if attrs.parties else "—"
             print(
                 f"  -> status={attrs.status:<9}  date={date_str}  "
-                f"provider={attrs.provider!r}"
+                f"parties=[{parties_str}]"
             )
             by_status[attrs.status] = by_status.get(attrs.status, 0) + 1
         total += len(events)

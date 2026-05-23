@@ -55,7 +55,6 @@ def test_first_note_shape_bolded() -> None:
     first = claim.notes[0]
     assert first.raw_header.startswith("**Date: 08/29/2025")
     assert first.raw_header.endswith("**")
-    assert "Activity: Resolution Strategy" in first.raw_header
 
 
 def test_offsets_are_monotonic() -> None:

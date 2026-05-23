@@ -25,6 +25,9 @@ dist/
 *.sqlite
 *.sqlite3
 
+# Per-run pipeline logs
+logs/
+
 # IDE / OS
 .vscode/
 .idea/

@@ -11,11 +11,14 @@ from claims.loader.loader import (
     RawNoteBlock,
     parse_file,
 )
+from claims.loader.metadata import ClaimMetadata, infer_claim_metadata
 
 __all__ = [
+    "ClaimMetadata",
     "LoadedClaim",
     "LoaderError",
     "RawClaimHeader",
     "RawNoteBlock",
+    "infer_claim_metadata",
     "parse_file",
 ]

@@ -6,12 +6,15 @@ JSON-schema generation and validation for us."""
 
 from __future__ import annotations
 
+import logging
 import os
 from typing import TYPE_CHECKING, TypeVar, cast
 
 from pydantic import BaseModel
 
 from claims.llm.base import LLMError
+
+_log = logging.getLogger(__name__)
 
 if TYPE_CHECKING:
     from openai import OpenAI as _OpenAI
@@ -51,6 +54,12 @@ class OpenAIClient:
         user: str,
         response_model: type[T],
     ) -> T:
+        _log.debug(
+            "openai call model=%s schema=%s user_chars=%d",
+            self.model,
+            response_model.__name__,
+            len(user),
+        )
         try:
             response = self._client.chat.completions.parse(
                 model=self.model,
@@ -61,11 +70,21 @@ class OpenAIClient:
                 response_format=response_model,
             )
         except Exception as exc:
+            _log.warning("openai call failed: %s", exc)
             raise LLMError(f"OpenAI call failed: {exc}") from exc
 
         message = response.choices[0].message
         if message.refusal:
+            _log.warning("openai refused: %s", message.refusal)
             raise LLMError(f"OpenAI refused: {message.refusal}")
         if message.parsed is None:
+            _log.warning("openai returned no parsed content")
             raise LLMError("OpenAI returned no parsed content")
+        usage = getattr(response, "usage", None)
+        if usage is not None:
+            _log.debug(
+                "openai ok prompt_tokens=%s completion_tokens=%s",
+                getattr(usage, "prompt_tokens", "?"),
+                getattr(usage, "completion_tokens", "?"),
+            )
         return cast(T, message.parsed)

@@ -14,6 +14,8 @@ callers that don't have an LLM client wired up keep working.
 
 from __future__ import annotations
 
+import logging
+
 from claims.extractor.appointment import AppointmentExtractor
 from claims.extractor.appointment_marker import AppointmentMarkerExtractor
 from claims.extractor.base import Extractor
@@ -22,6 +24,8 @@ from claims.extractor.rtw import ReturnToWorkExtractor
 from claims.extractor.rtw_terminal import RtwTerminalExtractor
 from claims.llm import StructuredLLM
 from claims.models import Event, Note
+
+_log = logging.getLogger(__name__)
 
 
 def default_rule_extractors() -> list[Extractor]:
@@ -46,6 +50,15 @@ def run_all(
     chosen = extractors if extractors is not None else default_rule_extractors()
     events: list[Event] = []
     for ext in chosen:
-        if ext.can_handle(note):
-            events.extend(ext.extract(note))
+        if not ext.can_handle(note):
+            continue
+        produced = ext.extract(note)
+        if produced:
+            _log.debug(
+                "%s emitted %d event(s) for note %s",
+                type(ext).__name__,
+                len(produced),
+                note.note_id,
+            )
+        events.extend(produced)
     return events

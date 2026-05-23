@@ -23,12 +23,14 @@ from claims.models import (
     AppointmentAttributes,
     Event,
     ReserveChangeAttributes,
+    ReturnToWorkAttributes,
 )
 from claims.resolver import (
     canonicalize_provider,
     resolve,
     resolve_appointments,
     resolve_reserve_changes,
+    resolve_rtw,
 )
 
 
@@ -336,6 +338,60 @@ def test_single_event_passes_through_unchanged() -> None:
     )
     assert ev.event_id == "solo"  # not re-uuid'd
     assert ev.extraction_method == "rule"
+
+
+# --- return_to_work ---------------------------------------------
+
+
+def _rtw_event(
+    return_date: date,
+    duty_type: str = "modified",
+    role: str | None = None,
+    eid: str = "e",
+) -> Event:
+    return Event(
+        event_id=eid,
+        claim_id="C",
+        event_type="return_to_work",
+        event_date=return_date,
+        attributes=ReturnToWorkAttributes(
+            duty_type=duty_type,  # type: ignore[arg-type]
+            role=role,
+        ),
+        extraction_method="llm",
+    )
+
+
+def test_rtw_identical_events_merge() -> None:
+    """Same claim, same date, same duty_type → one merged event.
+    This catches the future-dated-confirmation + later-summary
+    pattern observed in the corpus."""
+    a = _rtw_event(date(2025, 11, 10), role="scheduling coordinator", eid="a")
+    b = _rtw_event(date(2025, 11, 10), role="scheduling coordinator", eid="b")
+    [merged] = resolve_rtw([a, b])
+    assert merged.event_date == date(2025, 11, 10)
+    assert merged.extraction_method == "merged"
+
+
+def test_rtw_different_dates_do_not_merge() -> None:
+    """A modified return on 11/10 and a full return on 1/5 are
+    distinct events; both should survive."""
+    a = _rtw_event(date(2025, 11, 10), "modified", eid="a")
+    b = _rtw_event(date(2026, 1, 5), "full", eid="b")
+    assert len(resolve_rtw([a, b])) == 2
+
+
+def test_rtw_longer_role_form_preferred() -> None:
+    a = _rtw_event(date(2025, 11, 10), "modified", role=None, eid="a")
+    b = _rtw_event(
+        date(2025, 11, 10),
+        "modified",
+        role="scheduling coordinator",
+        eid="b",
+    )
+    [merged] = resolve_rtw([a, b])
+    assert isinstance(merged.attributes, ReturnToWorkAttributes)
+    assert merged.attributes.role == "scheduling coordinator"
 
 
 # --- resolve() top-level ----------------------------------------

@@ -11,6 +11,7 @@ from __future__ import annotations
 from claims.models import Event
 from claims.resolver.appointments import resolve_appointments
 from claims.resolver.reserve_change import resolve_reserve_changes
+from claims.resolver.rtw import resolve_rtw
 
 
 def resolve(events: list[Event]) -> list[Event]:
@@ -21,6 +22,6 @@ def resolve(events: list[Event]) -> list[Event]:
     out: list[Event] = []
     out.extend(resolve_reserve_changes(by_type.get("reserve_change", [])))
     out.extend(resolve_appointments(by_type.get("appointment", [])))
-    out.extend(by_type.get("return_to_work", []))
+    out.extend(resolve_rtw(by_type.get("return_to_work", [])))
     out.extend(by_type.get("rtw_terminal", []))
     return out

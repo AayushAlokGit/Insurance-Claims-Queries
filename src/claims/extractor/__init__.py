@@ -9,12 +9,16 @@ from claims.extractor.orchestrator import (
     run_all,
 )
 from claims.extractor.reserve_change import ReserveChangeExtractor
+from claims.extractor.rtw import ReturnToWorkExtractor
+from claims.extractor.rtw_terminal import RtwTerminalExtractor
 
 __all__ = [
     "AppointmentExtractor",
     "AppointmentMarkerExtractor",
     "Extractor",
     "ReserveChangeExtractor",
+    "ReturnToWorkExtractor",
+    "RtwTerminalExtractor",
     "default_extractors",
     "default_rule_extractors",
     "run_all",

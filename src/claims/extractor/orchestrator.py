@@ -18,6 +18,8 @@ from claims.extractor.appointment import AppointmentExtractor
 from claims.extractor.appointment_marker import AppointmentMarkerExtractor
 from claims.extractor.base import Extractor
 from claims.extractor.reserve_change import ReserveChangeExtractor
+from claims.extractor.rtw import ReturnToWorkExtractor
+from claims.extractor.rtw_terminal import RtwTerminalExtractor
 from claims.llm import StructuredLLM
 from claims.models import Event, Note
 
@@ -33,6 +35,8 @@ def default_extractors(llm: StructuredLLM) -> list[Extractor]:
     return [
         *default_rule_extractors(),
         AppointmentExtractor(llm),
+        ReturnToWorkExtractor(llm),
+        RtwTerminalExtractor(llm),
     ]
 
 

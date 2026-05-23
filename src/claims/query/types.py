@@ -46,6 +46,7 @@ Q1Result = Annotated[
 class Q2Appointment(BaseModel):
     model_config = ConfigDict(frozen=True)
     date: date
+    status: Literal["attended"] = "attended"
     provider: str | None
     specialty: str | None
     appointment_type: str | None

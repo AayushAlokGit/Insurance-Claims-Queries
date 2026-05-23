@@ -24,6 +24,8 @@ was rejected** — so the reasoning is traceable, not just the outcome.
 | DD-011 | Model "never returned to work" as a first-class terminal event, not a null | Accepted | 2026-05-22 |
 | DD-012 | Trim `Claim` and event taxonomy to query-minimum; defer speculative fields | Accepted | 2026-05-22 |
 | DD-013 | Normalizer parses header dates into typed fields; body text preserved verbatim | Accepted | 2026-05-23 |
+| DD-014 | LLM extractors retry transient failures up to 3 attempts with backoff, then drop+warn | Accepted | 2026-05-23 |
+| DD-015 | Per-note extraction is parallelized across notes (default 4 workers, threads, --workers configurable) | Accepted | 2026-05-23 |
 
 ---
 
@@ -401,6 +403,134 @@ when they need an ISO value.
   the `Note`* — speculative; no extractor currently needs it, and
   every extractor already knows which substring it cares about, so
   the on-demand `parseDate(substring)` call is sufficient.
+
+---
+
+## DD-014 — LLM extractors retry transient failures up to 3 attempts with backoff, then drop+warn
+**Status:** Accepted · **Date:** 2026-05-23
+
+**Context.** Both LLM providers exhibit transient failure modes —
+Gemini emits `503 UNAVAILABLE` on demand spikes, OpenAI emits `429`
+rate-limits, both can hit generic network blips. During the Phase 11
+verification ingest of claim 2, 3 of ~75 Gemini calls hit `503`. The
+original Phase 8 policy was "catch `LLMError`, return `[]`" — the
+events those notes would have produced were silently lost. With
+~4% failure rate at this scale, recall is unreliable in a way that
+isn't visible at the query layer.
+
+**Decision.** Wrap each provider's `structured()` API call in a
+bounded-retry helper (`src/claims/llm/retry.py`). Up to **3 total
+attempts** with **exponential backoff** (1s, then 3s between
+attempts) **plus ±50% jitter** on each sleep. After the final
+attempt, the exception propagates and the extractor's existing
+`except LLMError: return []` catches it — so the pipeline still
+completes, but only after a real effort to recover. Each retry is
+logged at INFO; the final failure logs at WARNING.
+
+**Why.**
+- **Transient failures are the dominant class.** Of the ~3 failures
+  observed in the verification run, all three were `503 UNAVAILABLE`
+  on Gemini — exactly the case retry is designed for.
+- **Bounded budget keeps cost predictable.** 3 attempts is a hard
+  cap; even a sustained provider outage adds at most ~6 seconds of
+  delay + 2 extra calls per note. Worst case across both samples:
+  ~400 extra LLM calls in a row, still within free-tier daily limits.
+- **Jitter desynchronizes retry storms.** When a provider has an
+  outage that resolves at a specific moment, every client that hit
+  the same fixed backoff would retry at the exact same time and
+  re-overload the API the instant it came back up. ±50% multiplicative
+  jitter on each sleep spreads retries over a window, smoothing the
+  recovery curve. Same principle as TCP backoff and AWS's "full
+  jitter" pattern.
+- **Drop+warn at the end preserves pipeline progress.** A single
+  unrecoverable note doesn't block the rest of the claim — important
+  for long-running batch ingests. The WARNING line in the run log
+  makes the loss inspectable.
+- **Compatible with existing extractor error handling.** Extractors
+  already catch `LLMError` and return `[]`. The retry helper sits
+  *inside* the client, not at the extractor level — extractors get
+  the same contract (succeed or `LLMError`) they had before, just
+  with a higher probability of success.
+
+**Rejected.**
+- *Single-attempt silent drop (Phase 8 policy)* — what we just lived
+  with. Loses data invisibly; ingest output isn't reproducible across
+  runs because the same input can produce different event counts.
+- *Sidecar deferred-extraction queue* — a separate table for failed
+  notes plus a re-run command. Correct in the limit but adds a whole
+  reconciliation surface for marginal gain when transient errors are
+  already mostly catchable by retry.
+- *Fail-loud when failure rate > N%* — appealing but brittle. One
+  bad token (e.g. a deprecated model) would block the entire run,
+  and the "right" threshold depends on the corpus.
+- *Unbounded retry with longer backoff* — risks runaway cost and
+  obscures genuine systemic issues. The 3-attempt cap forces operator
+  attention on persistent failures.
+
+The retry helper deliberately accepts a `NonRetryableError`
+sentinel: a future need to skip retries on deterministic failures
+(schema validation, prompt refusals) has a hook ready without
+expanding the policy now.
+
+---
+
+## DD-015 — Per-note extraction is parallelized across notes
+**Status:** Accepted · **Date:** 2026-05-23
+
+**Context.** Verification ingests of the two sample claims each
+took ~2 minutes serially — almost entirely wall-clock time on
+serial LLM network round-trips. DD-006 makes per-note extraction
+independent (no cross-note state during extraction; the Resolver
+handles cross-note merge afterward). So the work is
+embarrassingly parallel; only the rate-limit ceiling stops us
+from going wider.
+
+**Decision.** Use a `concurrent.futures.ThreadPoolExecutor` in
+`__main__._cmd_ingest` to fan out `run_all(note, …)` calls across
+notes. **Default `workers=4`**; configurable via `--workers N`
+(use `--workers 1` for fully serial). Threads (not async) because
+the underlying SDKs are sync and threading is GIL-friendly for
+I/O-bound work.
+
+**Why.**
+- **Embarrassingly parallel.** DD-006 already commits us to
+  per-note extraction with no shared state; the only thing serial
+  was the orchestrator loop.
+- **4 workers fits Gemini free-tier RPM ceiling.** With up to 3
+  LLM extractors firing per note, 4 workers peaks around 12 RPM
+  vs. the 15 RPM free-tier limit on `gemini-2.5-flash-lite`.
+  Higher concurrency would trip the limit; lower leaves too much
+  wall-clock on the table.
+- **DD-014's retry-with-jitter absorbs the 429s.** Concurrent
+  workers occasionally crowd the rate limit; jittered backoff
+  spreads the recovery. The two DDs work together — neither is
+  fully effective without the other.
+- **Cheap to opt out.** `--workers 1` restores the pre-DD-015
+  serial behavior bit-for-bit. Useful when an evaluator wants
+  deterministic event-emission order, or when running against a
+  shared free-tier quota with other workloads.
+- **No async refactor.** ThreadPoolExecutor is a one-import,
+  ten-line change. Going async would touch the entire LLM client
+  layer and the SDK call sites for marginal additional throughput.
+
+**Rejected.**
+- *Async/await throughout* — broader rewrite, no clear win when
+  the SDKs are sync.
+- *Multiprocessing* — overkill for I/O-bound work; adds pickling
+  overhead.
+- *Higher default (e.g. 8 workers)* — would exceed Gemini free-tier
+  RPM and rely entirely on retries to recover. Bad default for the
+  exercise's primary expected provider.
+- *No-cap parallelism* — unbounded concurrency invites runaway
+  spend on paid tiers and retry storms on free tier.
+
+The order in which events are emitted into `raw_events` becomes
+non-deterministic with workers > 1. This doesn't affect
+correctness — the Resolver orders deterministically and stored
+events carry their own dates — but tests that asserted order
+would need adjustment. Existing tests call extractors directly
+on a single note, not through the parallel orchestrator, so they
+are unaffected.
 
 ---
 

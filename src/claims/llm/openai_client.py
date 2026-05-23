@@ -13,6 +13,7 @@ from typing import TYPE_CHECKING, TypeVar, cast
 from pydantic import BaseModel
 
 from claims.llm.base import LLMError
+from claims.llm.retry import with_retry
 
 _log = logging.getLogger(__name__)
 
@@ -60,8 +61,9 @@ class OpenAIClient:
             response_model.__name__,
             len(user),
         )
-        try:
-            response = self._client.chat.completions.parse(
+
+        def _call():
+            return self._client.chat.completions.parse(
                 model=self.model,
                 messages=[
                     {"role": "system", "content": system},
@@ -69,8 +71,10 @@ class OpenAIClient:
                 ],
                 response_format=response_model,
             )
+
+        try:
+            response = with_retry(_call, label=f"openai/{self.model}")
         except Exception as exc:
-            _log.warning("openai call failed: %s", exc)
             raise LLMError(f"OpenAI call failed: {exc}") from exc
 
         message = response.choices[0].message

@@ -22,6 +22,7 @@ from __future__ import annotations
 import argparse
 import logging
 import sys
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import date, datetime, timezone
 from pathlib import Path
 
@@ -49,20 +50,24 @@ from claims.store import (
 
 
 def _cmd_ingest(args: argparse.Namespace) -> int:
+    """Run the full pipeline on one claim file and upsert into SQLite."""
     load_dotenv()
     path = Path(args.file)
-    # We don't know the claim_id until after parse, so use the
-    # file stem as the placeholder for the log filename — set
-    # the real one after parse completes.
+
+    # --- Per-run logging --------------------------------------
+    # File stem stands in for claim_id in the log filename until
+    # the loader has actually parsed the file.
     log_path = setup_logging(claim_id=path.stem, verbose=args.verbose)
     log = logging.getLogger("claims.cli")
     log.info("ingest start file=%s db=%s log=%s", path.name, args.db, log_path)
 
+    # --- Loader: file → RawNoteBlocks → Normalizer → Notes ----
     loaded = parse_file(str(path))
     notes = []
     for i, raw in enumerate(loaded.notes):
         n = normalize(raw, index=i)
         if n is None:
+            # Normalizer rejects only on unparseable header dates.
             log.debug("note %d rejected by normalizer", i)
             continue
         notes.append(n)
@@ -73,11 +78,13 @@ def _cmd_ingest(args: argparse.Namespace) -> int:
         len(notes),
     )
 
+    # --- Claim-level metadata (regex inference + CLI overrides) -
     inferred = infer_claim_metadata(loaded)
     dol_str: str | None = args.date_of_loss or (
         inferred.date_of_loss.isoformat() if inferred.date_of_loss else None
     )
     if dol_str is None:
+        # Q1 needs date_of_loss; refuse to ingest without it.
         log.error(
             "date_of_loss could not be inferred from %s; pass --date-of-loss",
             path.name,
@@ -93,6 +100,9 @@ def _cmd_ingest(args: argparse.Namespace) -> int:
         claim_type,
     )
 
+    # --- Extractor registry ----------------------------------
+    # --no-llm short-circuits to the rule-only set (Reserve +
+    # Marker). The full set adds the three LLM extractors.
     if args.no_llm:
         extractors = None  # run_all defaults to rule-only
         log.info("extractors: rule-only (--no-llm)")
@@ -104,21 +114,55 @@ def _cmd_ingest(args: argparse.Namespace) -> int:
             "extractors: full (provider=%s model=%s)", provider, llm.model
         )
 
+    # --- Per-note extraction (serial or parallel) ------------
+    # Per-note extraction is independent (DD-006). DD-015 turns
+    # that into bounded parallelism; --workers 1 restores the
+    # serial path for deterministic / quota-sensitive runs.
     raw_events: list = []
-    for note in notes:
-        events = run_all(note, extractors=extractors)
-        if events:
-            log.debug(
-                "note %s -> %d events", note.note_id, len(events)
-            )
-        raw_events.extend(events)
+    workers = max(1, args.workers)
+    if workers == 1:
+        log.info("extraction concurrency: serial")
+        for note in notes:
+            events = run_all(note, extractors=extractors)
+            if events:
+                log.debug("note %s -> %d events", note.note_id, len(events))
+            raw_events.extend(events)
+    else:
+        # Threads (not async): LLM SDKs are sync, calls are I/O-bound,
+        # GIL releases on I/O. DD-014's retry-with-jitter absorbs the
+        # 429s that bunch up at higher worker counts.
+        log.info("extraction concurrency: %d workers", workers)
+        with ThreadPoolExecutor(max_workers=workers) as pool:
+            futures = {
+                pool.submit(run_all, n, extractors=extractors): n
+                for n in notes
+            }
+            for fut in as_completed(futures):
+                note = futures[fut]
+                try:
+                    events = fut.result()
+                except Exception as exc:
+                    # One failing note shouldn't take down the run.
+                    log.warning(
+                        "note %s extraction failed: %s", note.note_id, exc
+                    )
+                    continue
+                if events:
+                    log.debug(
+                        "note %s -> %d events", note.note_id, len(events)
+                    )
+                raw_events.extend(events)
     log.info("raw events: %d", len(raw_events))
+    # Per-type counts help spot extraction-stage drop-outs.
     by_type: dict[str, int] = {}
     for ev in raw_events:
         by_type[ev.event_type] = by_type.get(ev.event_type, 0) + 1
     for et, n in sorted(by_type.items()):
         log.info("  raw %s: %d", et, n)
 
+    # --- Resolver: dedup + cross-event derivations -----------
+    # Reserve deltas, appointment proximity-merge + status
+    # promotion, RTW identity-merge.
     resolved = resolve(raw_events)
     log.info("resolved events: %d", len(resolved))
     by_type = {}
@@ -127,6 +171,7 @@ def _cmd_ingest(args: argparse.Namespace) -> int:
     for et, n in sorted(by_type.items()):
         log.info("  resolved %s: %d", et, n)
 
+    # --- Store: upsert the claim and its events --------------
     conn = connect(args.db)
     create_schema(conn)
     claim = Claim(
@@ -138,7 +183,9 @@ def _cmd_ingest(args: argparse.Namespace) -> int:
         source_file=loaded.header.source_file,
         ingested_at=datetime.now(tz=timezone.utc),
     )
-    # Upsert: replace any existing claim+events so re-ingest is idempotent.
+    # Replace this claim's prior events so re-ingest is idempotent.
+    # FK cascade would also drop them on claim delete, but explicit
+    # is safer when the schema evolves.
     with conn:
         conn.execute(
             "DELETE FROM event WHERE claim_id = ?", (claim.claim_id,)
@@ -155,7 +202,9 @@ def _cmd_ingest(args: argparse.Namespace) -> int:
 
 
 def _cmd_query(args: argparse.Namespace) -> int:
+    """Run one of the four canned queries and print typed JSON."""
     conn = connect(args.db)
+    # argparse already restricts `which` to q1-q4 via choices=…
     if args.which == "q1":
         result = q1_return_to_work(conn, args.claim_id)
     elif args.which == "q2":
@@ -167,14 +216,18 @@ def _cmd_query(args: argparse.Namespace) -> int:
     else:
         print(f"unknown query: {args.which}", file=sys.stderr)
         return 1
+    # Pydantic JSON respects Decimal precision + ISO date strings.
     print(result.model_dump_json(indent=2))
     return 0
 
 
 def main(argv: list[str] | None = None) -> int:
+    """Top-level CLI dispatch. argv is exposed so tests can drive
+    the CLI without spawning a subprocess."""
     parser = argparse.ArgumentParser(prog="claims", description=__doc__)
     sub = parser.add_subparsers(dest="cmd", required=True)
 
+    # --- ingest subcommand -----------------------------------
     ingest = sub.add_parser("ingest", help="Load a claim file into SQLite.")
     ingest.add_argument("--file", required=True, help="Path to notes file.")
     ingest.add_argument(
@@ -208,12 +261,22 @@ def main(argv: list[str] | None = None) -> int:
         help="Override LLM_PROVIDER env var.",
     )
     ingest.add_argument(
+        "--workers",
+        type=int,
+        default=4,
+        help="Per-note extraction parallelism (default: 4). "
+        "Higher values mean faster ingest but more concurrent LLM "
+        "calls — keep below the provider's RPM limit. Set to 1 "
+        "for fully serial execution.",
+    )
+    ingest.add_argument(
         "--verbose",
         action="store_true",
         help="DEBUG-level console output. The log file always "
         "contains DEBUG-level detail regardless.",
     )
 
+    # --- query subcommand ------------------------------------
     query = sub.add_parser("query", help="Run a canned query.")
     query.add_argument("which", choices=["q1", "q2", "q3", "q4"])
     query.add_argument("--claim-id", required=True)

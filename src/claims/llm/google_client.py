@@ -14,6 +14,7 @@ from typing import TYPE_CHECKING, TypeVar
 from pydantic import BaseModel
 
 from claims.llm.base import LLMError
+from claims.llm.retry import NonRetryableError, with_retry
 
 _log = logging.getLogger(__name__)
 
@@ -76,8 +77,9 @@ class GoogleClient:
             response_model.__name__,
             len(user),
         )
-        try:
-            response = self._client.models.generate_content(
+
+        def _call():
+            return self._client.models.generate_content(
                 model=self.model,
                 contents=user,
                 config=types.GenerateContentConfig(
@@ -86,8 +88,10 @@ class GoogleClient:
                     response_schema=schema,
                 ),
             )
-        except Exception as exc:  # network, auth, rate limit
-            _log.warning("gemini call failed: %s", exc)
+
+        try:
+            response = with_retry(_call, label=f"gemini/{self.model}")
+        except Exception as exc:
             raise LLMError(f"Gemini call failed: {exc}") from exc
 
         text = response.text

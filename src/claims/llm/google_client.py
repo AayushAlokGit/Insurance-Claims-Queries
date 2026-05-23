@@ -8,7 +8,7 @@ enough for dev iteration on this corpus.
 from __future__ import annotations
 
 import os
-from typing import TYPE_CHECKING, TypeVar, cast
+from typing import TYPE_CHECKING, TypeVar
 
 from pydantic import BaseModel
 
@@ -61,6 +61,12 @@ class GoogleClient:
     ) -> T:
         from google.genai import types
 
+        # Google's response_schema is a subset of JSON Schema — it
+        # does NOT accept `additionalProperties`, but pydantic emits
+        # it whenever extra="forbid" is set. Strip it (recursively)
+        # before sending, then parse the JSON text ourselves.
+        schema = _strip_unsupported(response_model.model_json_schema())
+
         try:
             response = self._client.models.generate_content(
                 model=self.model,
@@ -68,19 +74,44 @@ class GoogleClient:
                 config=types.GenerateContentConfig(
                     system_instruction=system,
                     response_mime_type="application/json",
-                    response_schema=response_model,
+                    response_schema=schema,
                 ),
             )
         except Exception as exc:  # network, auth, rate limit
             raise LLMError(f"Gemini call failed: {exc}") from exc
 
-        parsed = response.parsed
-        if parsed is None:
+        text = response.text
+        if not text:
             raise LLMError(
-                f"Gemini returned no parsed content "
-                f"(text={response.text!r})"
+                f"Gemini returned empty response (response={response!r})"
             )
-        # google-genai returns the pydantic instance directly when
-        # response_schema is a pydantic type. The cast pleases the
-        # type checker without changing runtime behaviour.
-        return cast(T, parsed)
+        try:
+            return response_model.model_validate_json(text)
+        except Exception as exc:
+            raise LLMError(
+                f"Gemini response did not match {response_model.__name__}: "
+                f"{exc}; text={text!r}"
+            ) from exc
+
+
+_UNSUPPORTED_KEYS: tuple[str, ...] = (
+    "additionalProperties",
+    "$schema",
+    "title",
+)
+
+
+def _strip_unsupported(schema: object) -> object:
+    """Recursively remove keys that Google's response_schema subset
+    does not accept. `additionalProperties` is the load-bearing one
+    (pydantic emits it for extra="forbid"); `$schema` and `title`
+    are harmless extras that also aren't part of Google's proto."""
+    if isinstance(schema, dict):
+        for key in _UNSUPPORTED_KEYS:
+            schema.pop(key, None)
+        for value in schema.values():
+            _strip_unsupported(value)
+    elif isinstance(schema, list):
+        for value in schema:
+            _strip_unsupported(value)
+    return schema

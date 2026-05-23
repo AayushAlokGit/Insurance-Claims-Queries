@@ -1,0 +1,420 @@
+# Design Decisions Log
+
+A running, append-only log of design decisions made for the Adaptional claim
+analysis exercise. Each entry records **what** was decided, **why**, and **what
+was rejected** — so the reasoning is traceable, not just the outcome.
+
+- This file is the *decision tracker*. `DESIGN.md` is the polished spec that
+  these decisions feed into. `claims file analysis.md` is the source-data
+  inventory the decisions are based on.
+- Newest entries at the bottom. Status: `Proposed` → `Accepted` → `Superseded`.
+
+| ID | Decision | Status | Date |
+|----|----------|--------|------|
+| DD-001 | Treat the problem as an ETL pipeline, not a Q&A system | Accepted | 2026-05-22 |
+| DD-002 | Event-centric data model — typed, dated `Event` as the atomic unit | Accepted | 2026-05-22 |
+| DD-003 | Scope to a query-answering system — no raw-note preservation layer | Accepted | 2026-05-22 |
+| DD-004 | Use SQLite as the store | Accepted | 2026-05-22 |
+| DD-005 | Hybrid extraction — deterministic rules + LLM | Accepted | 2026-05-22 |
+| DD-006 | Per-note extraction granularity, with a dedup/resolver stage | Accepted | 2026-05-22 |
+| DD-007 | JSON `attributes` column for type-specific event payloads | Accepted | 2026-05-22 |
+| DD-008 | Three-tier query layer (canned / raw SQL / NL→SQL) | Accepted | 2026-05-22 |
+| DD-009 | Defer eval harness from MVP scope; keep as nice-to-have extension | Accepted | 2026-05-22 |
+| DD-010 | Model claims as injury-or-illness from day one; use loss-neutral vocabulary | Accepted | 2026-05-22 |
+| DD-011 | Model "never returned to work" as a first-class terminal event, not a null | Accepted | 2026-05-22 |
+| DD-012 | Trim `Claim` and event taxonomy to query-minimum; defer speculative fields | Accepted | 2026-05-22 |
+| DD-013 | Normalizer parses header dates into typed fields; body text preserved verbatim | Accepted | 2026-05-23 |
+
+---
+
+## DD-001 — Treat the problem as an ETL pipeline, not a Q&A system
+**Status:** Accepted · **Date:** 2026-05-22
+
+**Context.** The brief states that a single claim could be answered with one LLM
+call — that is explicitly *not* the goal. The goal is trends/insights over a
+large corpus.
+
+**Decision.** Build an ETL pipeline: extract structured facts from prose **once**
+at ingest time (the expensive LLM-assisted step), store them, then run cheap,
+deterministic queries over the corpus.
+
+**Why.** Per-query LLM calls don't scale, aren't reproducible, and can't be
+audited. Extracting once and querying many times amortizes the expensive step.
+
+**Rejected.** Query-time LLM Q&A over raw notes — doesn't scale to a corpus, no
+reproducibility, no auditability.
+
+---
+
+## DD-002 — Event-centric data model
+**Status:** Accepted · **Date:** 2026-05-22
+
+**Context.** All four sample queries are temporal or relational ("how long
+between X and Y", "how many times Z").
+
+**Decision.** The atomic unit of the model is a typed, dated `Event`
+(`appointment`, `reserve_change`, `work_status_change`, `return_to_work`, …).
+Queries are aggregations over events.
+
+**Why.** A flat "attributes per claim" record cannot express "how many times" or
+"how long between." An event timeline can.
+
+**Rejected.** One-row-per-claim flat schema — cannot answer counting/duration
+queries; no room to grow.
+
+---
+
+## DD-003 — Scope to a query-answering system; no raw-note preservation layer
+**Status:** Accepted · **Date:** 2026-05-22
+
+**Context.** An earlier framing proposed persisting verbatim notes for provenance
+and future re-extraction. The deliverable for this exercise is a working
+query-answering system — re-extraction workflows and audit tooling would expand
+scope past the time budget.
+
+**Decision.** Persist only what queries need: the `claims` and `events` tables.
+Do **not** build a persisted raw-notes layer, re-extraction workflows, or
+`--explain` audit tooling. Raw notes still exist as the source files on disk and
+as in-memory `Note` objects during a pipeline run — they are just not a
+persisted, queried layer.
+
+**Why.** Keeps the build focused on the brief's core ask (ingest → store →
+query). Provenance and re-extraction are valuable in a production insurance
+product but are deliberate non-goals for a time-boxed exercise.
+
+**Optional, near-free.** If light auditability is wanted later, a single
+`source_excerpt` text field on `events` can be kept without adding a notes table
+— deferred unless a query needs it.
+
+**Rejected.** Full raw-note + re-extraction + audit infrastructure — correct for
+production, scope creep here. (This revises the original DD-003, which proposed
+exactly that.)
+
+---
+
+## DD-004 — Use SQLite as the store
+**Status:** Accepted · **Date:** 2026-05-22
+
+**Context.** The brief requires something easy to run on a developer's machine,
+and wants "AI-written queries."
+
+**Decision.** Store extracted data in SQLite (single file, zero setup, SQL-native).
+
+**Why.** Zero-config, runs anywhere, speaks SQL (the natural interface for both
+human and AI-written queries), comfortably handles thousands of claims. All DB
+access goes through one repository module, so swapping to Postgres later is a
+connection-string change.
+
+**Rejected.** Postgres (premature ops overhead for the exercise); a NoSQL/document
+store (loses SQL aggregation, which is the whole point for corpus trends).
+
+---
+
+## DD-005 — Hybrid extraction (rules + LLM)
+**Status:** Accepted · **Date:** 2026-05-22
+
+**Context.** Some facts follow strict templates (`Activity: Reserving` notes);
+others are buried in free prose (was an appointment attended or just scheduled?).
+
+**Decision.** Use deterministic rules/regex where the text is structured, and an
+LLM only where genuine language understanding is required.
+
+**Why.** Rules are free, instant, 100% reproducible, and testable — right for
+exact financial data. The LLM is reserved for semantic judgment. Putting reserve
+math through an LLM would be reckless; forcing RTW detection into regex would be
+brittle.
+
+**Rejected.** Pure-LLM extraction (cost, non-reproducibility on exact numbers);
+pure-rules extraction (cannot handle messy narrative prose).
+
+---
+
+## DD-006 — Per-note extraction + dedup/resolver stage
+**Status:** Accepted · **Date:** 2026-05-22
+
+**Context.** Notes restate facts constantly — every Resolution Strategy snapshot
+repeats the surgery, diagnosis, etc. A single appointment is described across
+multiple notes (booked in one, attended in another).
+
+**Decision.** Extract events per-note (small, cacheable, parallelizable prompts),
+then run a dedicated Resolver stage that merges duplicate mentions into one
+canonical event.
+
+**Why.** Per-note granularity gives natural provenance and cheap prompts.
+Resolution is required anyway — e.g. query 4 (scheduled→seen lag) needs the
+booking note and the visit note merged into one appointment event.
+
+**Rejected.** Whole-claim single extraction call — huge prompt, no per-fact
+provenance, still needs dedup of internal restatement.
+
+---
+
+## DD-007 — JSON `attributes` column for type-specific payloads
+**Status:** Accepted · **Date:** 2026-05-22
+
+**Context.** Different event types need different fields; the taxonomy will keep
+growing.
+
+**Decision.** The `events` table has stable columns (`event_type`, `event_date`,
+provenance, confidence) plus a JSON `attributes` column holding type-specific
+fields.
+
+**Why.** Adding a new event type needs no schema migration. A query-hot type can
+later be promoted to its own typed table with indexes.
+
+**Rejected.** A table per event type now — premature; lots of migrations while
+the taxonomy is still moving.
+
+---
+
+## DD-008 — Three-tier query layer
+**Status:** Accepted · **Date:** 2026-05-22
+
+**Context.** The brief wants queries by "humans or AI"; correctness must be
+trustworthy.
+
+**Decision.** Layer the query surface from safe to flexible: (1) canned, tested
+query functions per sample query + corpus aggregates; (2) raw SQL over the event
+schema; (3) NL→SQL via LLM as a stretch goal.
+
+**Why.** Canned functions are the reliable demoable deliverable. Raw SQL exposes
+corpus trends. NL→SQL satisfies "AI-written queries" — but the LLM only *writes*
+SQL, it never *computes* answers; all arithmetic stays in SQL over verified data.
+
+**Rejected.** LLM-computes-the-answer — puts a non-deterministic component in the
+path of the actual numbers.
+
+---
+
+## DD-009 — Defer eval harness from MVP scope; keep as nice-to-have extension
+**Status:** Accepted · **Date:** 2026-05-22
+
+**Context.** An eval harness with a hand-labeled gold dataset is genuinely
+valuable — the brief lists evals as an X-factor — but it is a self-contained
+extension on top of the system, not a prerequisite for delivering the 4 sample
+queries.
+
+**Decision.** Defer the eval harness and `evals/gold.json` from the MVP build.
+Keep them designed-for: §7 of `DESIGN.md` sketches the shape so they can be
+added later without rework.
+
+**Why.** Scope control. The MVP correctness story is the four canned queries
+producing the right answers on the two sample claims, verified manually against
+the source notes; unit tests cover mechanical regressions. The eval harness is
+the polish layer on top of that, not the foundation.
+
+**Rejected.** Building evals inside MVP scope — valuable work, but not where the
+time is best spent given the brief's depth-over-breadth weighting.
+
+**Revises.** Supersedes the earlier framing of evals as in-scope.
+
+---
+
+## DD-010 — Model claims as injury-or-illness from day one; use loss-neutral vocabulary
+**Status:** Accepted · **Date:** 2026-05-22
+
+**Context.** Workers' compensation covers both **discrete-event injuries**
+(a fall, a lifting strain) and **occupational illness / disease** (carpal
+tunnel from repetitive motion, silicosis from dust exposure, occupational
+hearing loss, dermatitis, etc.). Both sample claims happen to be injury
+claims, but a real corpus contains a meaningful share of illness claims.
+The original schema named the anchor date `date_of_injury` and the
+description `injury_description` — vocabulary that silently excludes a
+whole compensable population.
+
+**Decision.** Use loss-neutral vocabulary on the `Claim` row from v1:
+- `date_of_loss` instead of `date_of_injury` (matches the notes' own
+  `DOL` / `FOL` terminology).
+- `loss_description` instead of `injury_description`.
+- Add a `claim_type` enum (`injury | illness`) as the corpus-query axis.
+  (Originally drafted as a three-value enum `injury | occupational_disease
+  | cumulative_trauma`; trimmed to two values per DD-012 — nothing in the
+  MVP queries by the finer distinction. Sub-types can split out later when
+  a query needs them, via DD-007.)
+
+The MVP build still only ingests injury claims (both samples are
+`injury`), but the schema and query layer no longer assume that.
+
+**Why.** Renaming columns later is cheap in code but expensive in
+trust — every downstream consumer (canned functions, AI-written SQL,
+analysts) would have to relearn the schema. Better to commit to honest
+vocabulary now. The `claim_type` axis is needed for any corpus
+aggregation to be meaningful: "average days-to-RTW" mixed across injury
+and occupational-disease claims is a misleading number, because the
+populations have structurally different timelines.
+
+**Rejected.** "Inject only for MVP, rename later" — defers a cheap rename
+into an expensive migration, and produces a schema whose names lie about
+what it actually models. Also rejected: separate `Claim` tables per
+type — premature; the shared columns vastly outweigh the differences,
+and `claim_type` + targeted attributes (e.g., illness-claim exposure
+history) cover the divergence.
+
+**Follow-ons (not built).** Illness claims would add structure not
+present in the injury samples: an *exposure-history* event series, a
+*causation-opinion* event type (medical opinion linking the condition
+to workplace exposure), and ICD-10 codes drawn from `J` / `L` / `H` /
+`G` ranges rather than `S` / `M`. These plug into the existing event
+taxonomy via the `Extractor` interface — no schema changes required.
+
+---
+
+## DD-011 — Model "never returned to work" as a first-class terminal event
+**Status:** Accepted · **Date:** 2026-05-22
+
+**Context.** Q1 ("how long to RTW?") has a non-obvious failure mode:
+several different real-world outcomes all produce "no `return_to_work`
+event" — pending recovery, permanent total disability (PTD), claimant
+deceased, voluntary separation, settlement closing the case without RTW.
+Treating all of these as `null` silently filters PTD/deceased/separated
+claims out of corpus averages and tells an analyst nothing about *why*
+there's no RTW.
+
+**Decision.** Add an `rtw_terminal` event type to the taxonomy. It
+records the definitive "this claim will never have an RTW" outcome with
+a `reason` attribute (`ptd | deceased | separated | closed_no_rtw`) and
+an effective date. Q1's canned function returns a discriminated union:
+`returned` / `never_returned (reason)` / `pending`, eliminating the
+ambiguous `null`.
+
+**Why.** Encoding the negative outcome in the event timeline — rather
+than inferring it inside the canned function — means every query gets
+the signal for free. Future queries like "% of claims closing without
+RTW," "PTD rate by jurisdiction," or "average time-to-settlement for
+non-returners" are simple aggregations over `rtw_terminal`, not
+re-extraction. Mirrors the same principle that put `appointment.status`
+in the stored data instead of at query time.
+
+**Rejected.** Returning a nullable number from Q1 and adding the
+discrimination logic inside the function — produces the right answer
+once, doesn't help any other query, and hides a definitive negative
+("PTD") as missing data. Also rejected: a separate `claim_closure`
+table — premature; the event taxonomy already absorbs this without a
+schema change.
+
+---
+
+## DD-012 — Trim `Claim` and event taxonomy to query-minimum; defer speculative fields
+**Status:** Accepted · **Date:** 2026-05-22
+
+**Context.** During design discussion the `Claim` table accumulated columns
+(`loss_description`, `body_parts`, `diagnoses`, `avg_weekly_wage`,
+`comp_rate`) and the event taxonomy accumulated a `work_status_change`
+type. None of these are read by any of the four sample queries. They were
+added as "useful data to have" or "obvious near-term axis" — speculative
+scope, not query-driven.
+
+**Decision.** Apply strict YAGNI to the data model:
+- **`Claim`** keeps only: `claim_id`, `account`, `jurisdiction`,
+  `claim_type`, `date_of_loss`, `source_file`, `ingested_at`. All
+  query-required or free from the file header.
+- **Event taxonomy** keeps only: `reserve_change` (Q3), `appointment`
+  (Q2/Q4), `return_to_work` (Q1), `rtw_terminal` (Q1 definitive
+  negative). Every active type is tied to a current query.
+- `work_status_change` moves to the "future event types" section — to
+  be added when a query (e.g., "offer-to-acceptance time," "% of
+  pending claims with outstanding offers") actually consumes it.
+- Q1's `pending` case is intentionally undifferentiated — just `status`
+  + `daysOpen`. No sub-reason. Differentiating *why* a claim is
+  pending is recorded as the extension path in `q1-return-to-work.md`
+  §6.1.
+
+**Why.** Every speculative field bloats either the LLM extractor's
+contract (more fields to infer, more failure modes) or the schema's
+surface area (more columns to maintain, document, and answer questions
+about). Both costs are real; both compound; neither buys anything until a
+query consumes the data. The JSON `attributes` design (DD-007) makes
+adding fields later cheap — pure addition, no migration — so the cost of
+*not* adding now is essentially zero.
+
+**Rejected.**
+- *Keep speculative fields because they're "near-free at extraction"* —
+  ignores the ongoing maintenance and explanation cost; also not true for
+  fields like `loss_description` that require LLM judgment.
+- *Add a `pending_reason` sub-enum to Q1 now* — would require the LLM to
+  infer reasons from absence-of-evidence (speculation), and no current
+  query reads it.
+- *Drop `claim_type` too* — user retained for injury-vs-illness corpus
+  separability; the column is essentially free (header / first-note
+  inference) and provides the only currently-meaningful corpus filter.
+
+**Revises.** Supersedes the broader `Claim` schema sketched in earlier
+revisions of `DESIGN.md` §3.1 and `data-modeling.md` §2. DD-010's
+loss-neutral naming (`date_of_loss`, `claim_type`) is preserved; only
+the speculative columns are dropped.
+
+---
+
+## DD-013 — Normalizer parses header dates into typed fields; body text preserved verbatim
+**Status:** Accepted · **Date:** 2026-05-23
+
+**Context.** The Normalizer's stated job is to centralize date parsing
+so format variance (`5.21.25` vs `5-21-25` vs `May 21 2025`) doesn't
+leak into every extractor. The obvious-but-wrong implementation is to
+rewrite *all* dates — including those inside note bodies — into
+ISO-8601 in-place. That produces a body where every date is uniform,
+which sounds appealing but breaks downstream invariants.
+
+**Decision.** The Normalizer parses the **header date** of each note
+into a typed ISO field (`note_date`) on the `Note` object. The note
+**body is preserved verbatim** apart from lossless character-level
+cleanup (mojibake repair, line-ending and whitespace normalization).
+Body dates remain in their original surface form (`Apr 17 2025 9:00AM`,
+`5.21.25`, etc.). The date-parsing logic lives in a **shared utility
+module** that extractors import and call directly on body substrings
+when they need an ISO value.
+
+**Why.** Three reasons, in order of severity:
+1. **The LLM `evidence_quote` substring check depends on body
+   fidelity** (extractor.md §6, §8). The LLM extractor copies a
+   verbatim phrase from the body into `evidence_quote`; a post-LLM
+   safety net verifies the quote is a substring of the body. If the
+   Normalizer rewrites `Apr 17 2025` → `2025-04-17` in the body, the
+   LLM either copies the rewritten form (and an auditor reading the
+   original source can no longer trace the extraction) or copies the
+   original form (and the substring check fails). Either way, the
+   anti-hallucination guarantee breaks.
+2. **Date detection in arbitrary prose is ambiguous.** `5/4` could be
+   May 4 or April 5; `the 21st` is contextual; `4 weeks` is a
+   duration, not a date. Rewriting in-place risks silently mangling
+   text when the parser was wrong. Preserving the body means the
+   worst case is "the extractor's call to the date parser returns
+   null" — a recoverable miss, not a corrupted note.
+3. **Centralization is achieved by shared code, not by mass rewrite.**
+   The promise of DESIGN.md §4.2 ("date parsing is centralized in
+   one module") is satisfied by exporting one well-tested `parseDate`
+   function that both the Normalizer (for headers) and the extractors
+   (for body substrings) call. The benefits — single test suite,
+   one place to change the two-digit-year pivot, one place to fix a
+   parsing bug — apply identically; only the *mechanism* differs.
+
+**Rejected.**
+- *Rewrite all dates in the body to ISO in-place* — breaks the
+  evidence-quote substring check; risks mangling ambiguous strings;
+  conflates lossless character cleanup with lossy semantic rewriting.
+- *Annotate dates with sidecar markup in the body* (`<date
+  iso="2025-04-17">Apr 17 2025</date>`) — pollutes the body with
+  machine markup the LLM would have to ignore, complicates the
+  evidence-quote check, and adds a parsing dialect for no real gain
+  over a shared `parseDate` utility.
+- *Pre-extract a structured `body_dates: ISODate[]` sidecar field on
+  the `Note`* — speculative; no extractor currently needs it, and
+  every extractor already knows which substring it cares about, so
+  the on-demand `parseDate(substring)` call is sufficient.
+
+---
+
+<!-- Append new decisions below this line. Template:
+
+## DD-0NN — <short title>
+**Status:** Proposed · **Date:** YYYY-MM-DD
+
+**Context.** <what situation forced the decision>
+
+**Decision.** <what was decided>
+
+**Why.** <rationale>
+
+**Rejected.** <alternatives considered and why not>
+
+-->

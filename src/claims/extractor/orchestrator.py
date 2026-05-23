@@ -8,12 +8,14 @@ affect correctness, only test reproducibility.
 
 from __future__ import annotations
 
+from claims.extractor.appointment_marker import AppointmentMarkerExtractor
 from claims.extractor.base import Extractor
 from claims.extractor.reserve_change import ReserveChangeExtractor
 from claims.models import Event, Note
 
 EXTRACTORS: list[Extractor] = [
     ReserveChangeExtractor(),
+    AppointmentMarkerExtractor(),
 ]
 
 

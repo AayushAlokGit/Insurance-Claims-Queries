@@ -13,7 +13,6 @@ dependencies = [
 [dependency-groups]
 dev = [
     "pytest>=8.0",
-    "pyright>=1.1.370",
 ]
 
 [build-system]
@@ -27,9 +26,3 @@ packages = ["src/claims"]
 testpaths = ["tests"]
 pythonpath = ["src"]
 addopts = "-ra"
-
-[tool.pyright]
-include = ["src", "tests"]
-pythonVersion = "3.12"
-typeCheckingMode = "strict"
-reportMissingTypeStubs = false

@@ -129,9 +129,9 @@ def _date_supported_by_quote(d: date | None, quote: str) -> bool:
     lower = quote.lower()
     return any(f.lower() in lower for f in _date_surface_forms(d))
 
-# --- Prefilter ---------------------------------------------------
+# --- Route gate (DD-018) -----------------------------------------
 #
-# Route the LLM ONLY at high-signal note shapes — Resolution
+# The LLM runs ONLY on high-signal note shapes — Resolution
 # Strategy summaries (periodic recaps with clean per-line
 # attribution) or notes that already carry a templated
 # `Date of Appointment:` block (canonical visit-summary shape).
@@ -144,39 +144,6 @@ def _date_supported_by_quote(d: date | None, quote: str) -> bool:
 _RE_DOA_TEMPLATE = re.compile(
     r"Date of Appointment\s*:", re.IGNORECASE
 )
-
-# Status-verb branch. Catches the attended/missed/cancelled
-# cases regardless of header style.
-_RE_STATUS_VERBS = re.compile(
-    r"\b(attended|missed|no[- ]show|did not show|DNA"
-    r"|cancell?ed|seen by|EE attended)\b",
-    re.IGNORECASE,
-)
-# `saw <provider> on <date>` is its own narrative-style trigger.
-_RE_SAW_ON = re.compile(r"\bsaw\b.{0,40}\bon\b", re.IGNORECASE)
-
-# Date-and-context branch. Catches scheduling-only events that
-# use a non-templated header (no marker, no status verb).
-_RE_APPT_CONTEXT = re.compile(
-    r"\b(appointment|visit|follow[- ]?up|scheduled"
-    r"|seen|consult|exam|evaluation|referral)\b",
-    re.IGNORECASE,
-)
-# A cheap date-pattern check: numeric MDY or month name.
-_RE_HAS_DATE = re.compile(
-    r"\d{1,2}[-/.]\d{1,2}"
-    r"|\b(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)"
-    r"(uary|ruary|ch|il|e|y|ust|ember|tober)?\b",
-    re.IGNORECASE,
-)
-
-
-def _passes_prefilter(body: str) -> bool:
-    if _RE_STATUS_VERBS.search(body) or _RE_SAW_ON.search(body):
-        return True
-    return bool(
-        _RE_HAS_DATE.search(body) and _RE_APPT_CONTEXT.search(body)
-    )
 
 
 # --- LLM response schema -----------------------------------------
@@ -320,19 +287,16 @@ class AppointmentExtractor:
         self._llm = llm
 
     def can_handle(self, note: Note) -> bool:
-        # Route gate (see prefilter comment block): only run the LLM
-        # on Resolution Strategy summaries or notes carrying a
-        # DOA template. Both are high-signal shapes; everything
-        # else is communication chatter that produced most of the
-        # phantom population.
+        # DD-018 route gate: only run the LLM on Resolution Strategy
+        # summaries or notes carrying a DOA template. Both are high-
+        # signal shapes; everything else is communication chatter
+        # that produced most of the phantom population.
         is_resolution_strategy = (
             note.activity is not None
             and note.activity.strip().lower() == "resolution strategy"
         )
         has_doa_template = bool(_RE_DOA_TEMPLATE.search(note.body))
-        if not (is_resolution_strategy or has_doa_template):
-            return False
-        return _passes_prefilter(note.body)
+        return is_resolution_strategy or has_doa_template
 
     def extract(self, note: Note) -> list[Event]:
         try:

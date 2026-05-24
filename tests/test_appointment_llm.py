@@ -58,43 +58,55 @@ class _FakeLLM:
         return self._response  # type: ignore[return-value]
 
 
-def _note(body: str, note_date: date = date(2025, 5, 1)) -> Note:
+def _note(
+    body: str,
+    note_date: date = date(2025, 5, 1),
+    activity: str = "Investigation",
+) -> Note:
     return Note(
         note_id="TEST-n0000",
         claim_id="TEST",
         note_date=note_date,
-        activity="Investigation",
+        activity=activity,
         author="M.H.",
         body=body,
         data_quality_flags=[],
     )
 
 
-# --- Prefilter ---------------------------------------------------
+# --- Route gate (DD-018) -----------------------------------------
 
 
-def test_prefilter_status_verb_branch() -> None:
+def test_route_gate_accepts_resolution_strategy_notes() -> None:
+    """RS notes are the periodic recap shape — always routed."""
     ext = AppointmentExtractor(_FakeLLM(AppointmentExtractionResponse()))
-    assert ext.can_handle(_note("EE attended PT on 6/3"))
-    assert ext.can_handle(_note("Missed the 8/13 follow-up"))
-    assert ext.can_handle(_note("Claimant no-show"))
-
-
-def test_prefilter_date_plus_context_branch() -> None:
-    """Scheduling-only events that use a non-templated header
-    must still fire the prefilter."""
-    ext = AppointmentExtractor(_FakeLLM(AppointmentExtractionResponse()))
-    assert ext.can_handle(_note("Follow-up visit set for 9-23"))
-    assert ext.can_handle(_note("Consult on Apr 22 2025"))
-
-
-def test_prefilter_rejects_non_appointment_notes() -> None:
-    """No status verb, no date+context → no LLM call."""
-    ext = AppointmentExtractor(_FakeLLM(AppointmentExtractionResponse()))
-    assert not ext.can_handle(_note("Pure prose with no signals."))
-    assert not ext.can_handle(
-        _note("Account number 2100000000 - Company WW")
+    assert ext.can_handle(
+        _note("EE attended PT on 6/3", activity="Resolution Strategy")
     )
+    assert ext.can_handle(
+        _note(
+            "SINCE LAST ACTION PLAN: missed 8/13 OV.",
+            activity="Resolution Strategy",
+        )
+    )
+
+
+def test_route_gate_accepts_doa_template_notes() -> None:
+    """Any note carrying a `Date of Appointment:` block is the
+    canonical visit-summary shape — routed regardless of Activity."""
+    ext = AppointmentExtractor(_FakeLLM(AppointmentExtractionResponse()))
+    assert ext.can_handle(
+        _note("Date of Appointment: 6-3-25\nName of physician: Dr. Harmon")
+    )
+
+
+def test_route_gate_rejects_contact_chatter() -> None:
+    """Notes without a DOA template and outside RS activity are
+    skipped, even when they contain status verbs or dates."""
+    ext = AppointmentExtractor(_FakeLLM(AppointmentExtractionResponse()))
+    assert not ext.can_handle(_note("EE attended PT on 6/3"))  # Investigation
+    assert not ext.can_handle(_note("Missed the 8/13 follow-up"))
+    assert not ext.can_handle(_note("Pure prose with no signals."))
 
 
 # --- Conversion --------------------------------------------------
@@ -259,12 +271,12 @@ def test_default_extractors_includes_llm_extractor() -> None:
 
 
 def test_run_all_with_llm_extractor_uses_canHandle_gate() -> None:
-    """A note with no appointment signals must not reach the LLM."""
+    """A note outside the DD-018 route gate must not reach the LLM."""
     llm = _FakeLLM(AppointmentExtractionResponse())
     note = _note("Pure prose with no signals.")
     events = run_all(note, extractors=default_extractors(llm))
     assert events == []
-    assert llm.calls == []  # prefilter cut it off
+    assert llm.calls == []  # DD-018 gate cut it off
 
 
 def test_run_all_routes_appointment_note_to_llm() -> None:
@@ -275,12 +287,15 @@ def test_run_all_routes_appointment_note_to_llm() -> None:
                     status="attended",
                     appointment_date=date(2025, 6, 3),
                     parties=["Harmon"],
-                    evidence_quote="EE attended PT on 6/3.",
+                    evidence_quote="EE attended PT with Dr. Harmon on 6/3.",
                 )
             ]
         )
     )
-    note = _note("EE attended PT on 6/3.")
+    note = _note(
+        "EE attended PT with Dr. Harmon on 6/3.",
+        activity="Resolution Strategy",
+    )
     events = run_all(note, extractors=default_extractors(llm))
     appts = [e for e in events if e.event_type == "appointment"]
     assert len(appts) == 1

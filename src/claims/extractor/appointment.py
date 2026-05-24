@@ -130,6 +130,20 @@ def _date_supported_by_quote(d: date | None, quote: str) -> bool:
     return any(f.lower() in lower for f in _date_surface_forms(d))
 
 # --- Prefilter ---------------------------------------------------
+#
+# Route the LLM ONLY at high-signal note shapes — Resolution
+# Strategy summaries (periodic recaps with clean per-line
+# attribution) or notes that already carry a templated
+# `Date of Appointment:` block (canonical visit-summary shape).
+# Everything else (Contact emails, Reserving entries, surveillance
+# write-ups, paperwork chatter) is skipped: those were the
+# dominant phantom source in earlier runs.
+#
+# Marker + Reserve extractors still run on every note.
+
+_RE_DOA_TEMPLATE = re.compile(
+    r"Date of Appointment\s*:", re.IGNORECASE
+)
 
 # Status-verb branch. Catches the attended/missed/cancelled
 # cases regardless of header style.
@@ -306,6 +320,18 @@ class AppointmentExtractor:
         self._llm = llm
 
     def can_handle(self, note: Note) -> bool:
+        # Route gate (see prefilter comment block): only run the LLM
+        # on Resolution Strategy summaries or notes carrying a
+        # DOA template. Both are high-signal shapes; everything
+        # else is communication chatter that produced most of the
+        # phantom population.
+        is_resolution_strategy = (
+            note.activity is not None
+            and note.activity.strip().lower() == "resolution strategy"
+        )
+        has_doa_template = bool(_RE_DOA_TEMPLATE.search(note.body))
+        if not (is_resolution_strategy or has_doa_template):
+            return False
         return _passes_prefilter(note.body)
 
     def extract(self, note: Note) -> list[Event]:

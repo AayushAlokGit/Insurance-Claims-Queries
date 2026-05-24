@@ -895,6 +895,23 @@ it, not just the most recent. Schema-additive (DD-007), no design
 re-litigation; the rename just made the merged-event audit story
 complete.
 
+## DD-018 — Route the LLM appointment extractor by note shape
+**Status:** Accepted · **Date:** 2026-05-23
+
+**Context.** Running the LLM appointment extractor on every note made Contact / Investigation / Reserving notes (paperwork, emails, surveillance, scheduling chatter) the dominant source of phantom appointments — cross-attributed parties, hallucinated dates near templated ones, claimant-as-party.
+
+**Decision.** The LLM appointment extractor runs only on notes that match one of two shapes:
+- `Activity: Resolution Strategy` (periodic summaries with clean per-line attribution), or
+- Body contains a `Date of Appointment:` template (canonical visit-summary form).
+
+Marker + Reserve extractors keep running on every note (rule-based, cheap, no FP in practice). RTW / RTW-Terminal extractors unchanged.
+
+**Why.** RS notes already deduplicated by the human author; DOA-template notes are the canonical visit-summary shape. Cuts LLM cost ~5×, eliminates the biggest phantom class.
+
+**Rejected.** Tightening the prompt further (already long; rules compete). Strict RS-only (loses visit-summary DOA blocks like the MMI declaration note).
+
+**Known coverage loss.** One-off mentions in narrative-only notes (e.g., retrospective ER mention in an intake's HPI section; standalone PT scheduling notices) — acceptable for Q2 count / Q4 lag.
+
 <!-- Append new decisions below this line. Template:
 
 ## DD-0NN — <short title>

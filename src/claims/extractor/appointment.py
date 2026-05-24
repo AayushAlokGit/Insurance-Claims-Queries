@@ -136,7 +136,7 @@ class AppointmentExtractionResponse(BaseModel):
 # parties across notes. The prompt's job is precision of evidence,
 # not deduplication.
 
-_SYSTEM_PROMPT = """You extract APPOINTMENT events from a workers'-comp claim note. An appointment is a clinical encounter — past, future, or missed — between the claimant and a healthcare provider.
+_SYSTEM_PROMPT = """You extract APPOINTMENT events from a workers'-comp claim note. In this system, an appointment is a MEDICAL encounter only — past, future, or missed — between the claimant and a healthcare provider. Workers'-comp claims also produce legal events (depositions, mediations, hearings, settlement conferences), administrative events (claim-acceptance meetings, adjuster reviews, employer RTW meetings), and vocational events (voc-rehab evaluations, ergonomic assessments). These are real dated events but they are OUT OF SCOPE for this extractor — do not emit them as appointments.
 
 STATUS:
 - attended  — the visit happened. A medical-record block (`Date of Appointment: X` followed by `Plan:` / clinical content) counts as attended even without an "attended" verb.

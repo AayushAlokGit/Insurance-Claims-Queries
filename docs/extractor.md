@@ -154,6 +154,17 @@ plausibly describes an appointment — whether or not a templated marker
 is present. Closes the recall gap left by the Marker extractor's
 limited keyword list.
 
+**Scope: medical encounters only.** The prompt is explicit that an
+"appointment" in this system is a *medical* encounter between the
+claimant and a healthcare provider. WC claims also produce legal events
+(depositions, mediations, hearings, settlement conferences), administrative
+events (claim-acceptance meetings, adjuster reviews, employer RTW
+meetings), and vocational events (voc-rehab, ergonomic assessments).
+These are dated WC events but are out of scope for this extractor —
+they belong to future event types (e.g. `litigation_update`; DESIGN.md
+§3 future taxonomy) and have no consumer among Q1–Q4. Q2 and Q4
+intentionally measure only the medical appointment surface.
+
 - **Triggers on (the prefilter):**
   ```
   (status verbs)   /attended|missed|no-show|did not show|DNA|

@@ -218,13 +218,14 @@ Resolver.
 
 ```json
 {
-  "provider": "Dr. Caldwell",
+  "parties": ["Dr. Caldwell", "Spine & Neurology Group"],
   "specialty": "neurosurgery",
   "scheduled_notice_date": "2025-08-29",
   "scheduled_for_date": "2025-09-15",
   "occurred_on": "2025-09-15",
   "status": "attended",
-  "appointment_type": "office_visit"
+  "appointment_type": "office_visit",
+  "source_note_date": "2025-09-15"
 }
 ```
 
@@ -232,19 +233,30 @@ Resolver.
 - Three date fields live in `attributes` to support Q4 (see
   `query_feasibility_analysis/q4-schedule-to-seen.md §2`):
   `scheduled_notice_date` (when the schedule was created — drives
-  access-to-care lag), `scheduled_for_date` (the booked-for date — used
-  as the Resolver matching key), and `occurred_on` (when the visit
+  access-to-care lag), `scheduled_for_date` (the booked-for date — part
+  of the Resolver matching key), and `occurred_on` (when the visit
   happened). The top-level `event_date` is set to `occurred_on` if
   present, else `scheduled_for_date`. So `ORDER BY event_date` reads
   chronologically the way a human would describe it.
 - `status` enum: `attended | missed | cancelled | scheduled | unknown`.
-  Resolver precedence on merge: `attended > missed > cancelled > scheduled`.
+  Resolver precedence on merge is **asymmetric** (DD-017):
+  `missed`/`cancelled` beat `attended`/`scheduled`/`unknown`; within
+  negatives `missed > cancelled`; within positives
+  `attended > scheduled > unknown`; ties broken by `source_note_date`
+  recency. Replaces the earlier monotonic-up rule, which silently
+  upgraded `missed → attended`.
 - `appointment_type`: `office_visit | follow_up | ime | fce | procedure |
   phone | telehealth`. Lets Q2's canned function filter (e.g., exclude
   phone calls from clinical visit counts).
-- Provider canonicalization happens here — `Dr. Caldwell, MD`,
-  `Caldwell`, `the neurosurgeon` all normalize to one string before the
-  merge key is computed.
+- `parties` (DD-016): the LLM emits every named individual and
+  organization party to *this* encounter; the resolver merges on
+  `(claim_id, encounter_date exact, parties_overlap ≥ 1)` using
+  deterministic normalization (strip honorifics, degree suffixes,
+  `& → and`). No fuzzy matching, no ±N day window. Replaces the
+  earlier `provider` string + string-canonicalization heuristic.
+- `source_note_date` (DD-017): the note this event was extracted from;
+  used by the resolver as the recency tiebreaker within a status tier.
+  After merge it holds the latest of the merged group.
 
 ### 4.3 `return_to_work` — Q1 positive case
 

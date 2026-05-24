@@ -14,7 +14,7 @@ This repository is the **Adaptional Take-Home Exercise**: design and (eventually
 4. **`./docs/data-modeling.md`** — Claim and Event schema deep dive. Active event types, future-but-not-built event types, the JSON-attributes tradeoff, and the promotion path from hot JSON field to typed column.
 5. **`./docs/normalizer.md`** — Normalizer stage deep dive. Two concerns: destructive text cleanup (mojibake repair, line endings, whitespace) and non-destructive date interpretation via a shared date parser. Why body dates are not rewritten in-place (the `evidence_quote` substring check depends on body fidelity), the two-digit-year pivot rule, yearless-date inference, the date-format and mojibake catalogs, and the "flag, don't paper over" failure-mode policy.
 6. **`./docs/extractor.md`** — Extractor stage deep dive. The hybrid rule-vs-LLM principle, the `Extractor` interface, the catalog of all five active extractors (Reserve, Appointment Marker as fast-path, Appointment LLM as general path, RTW, RTW Terminal) with triggers / output schemas / rationale, the four LLM contract principles (schema-constrained output, discriminated-union empty case, required `evidence_quote` with substring check, explicit negative prompt rules), multi-extractor coordination on a single note, and failure modes.
-7. **`./docs/resolver.md`** — Resolver algorithm deep dive. Five-pass algorithm (normalize → match-key → merge → derive → emit), match-key construction per event type, merge rules, the pluggable matching-strategy interface, provider canonicalization, fuzzy-date window rules, failure modes, and testability. Load-bearing for Q1's dedup, Q2's status precedence, Q3's `delta` derivation, and Q4's cross-note merge.
+7. **`./docs/resolver.md`** — Resolver algorithm deep dive. Five-pass algorithm (normalize → match-key → merge → derive → emit), match-key construction per event type, merge rules, the pluggable matching-strategy interface, failure modes, and testability. Note: §§5–6 (provider canonicalization, fuzzy-date window) are **superseded by DD-016** — the live design is the parties-set merge on exact `encounter_date`. Load-bearing for Q1's dedup, Q2's status precedence (DD-017 asymmetric), Q3's `delta` derivation, and Q4's cross-note merge.
 8. **`./query_feasibility_analysis/README.md`** — index for the per-query feasibility docs. Reading order inside that folder is Q3 → Q1 → Q2 → Q4 (by increasing difficulty):
    - `q3-reserve-changes.md` — pure rule extraction, never LLM
    - `q1-return-to-work.md` — LLM extractor with strict prompt contract; discriminated-union return
@@ -36,7 +36,8 @@ These are non-obvious from any one file; together they prevent re-litigating dec
 - **Per-note extraction (DD-006).** Extractors run per note, not per whole claim. Dedup / cross-note merge happens in the **Resolver** stage where it can be unit-tested. Do not push merge logic into an LLM prompt.
 - **JSON `attributes` with a promotion path (DD-007).** Hot fields stay JSON until a query needs index-grade performance, then graduate to typed columns. Schema-additive migrations only.
 - **Evidence-only state promotion.** A `scheduled` appointment does **not** auto-promote to `attended` from silence. Q1's RTW extractor extracts only when the note explicitly states the return occurred — offers and discussion produce no event. Same principle applies everywhere: derived facts require positive evidence; default to the weaker state.
-- **Status precedence for appointments:** `attended > missed > cancelled > scheduled`. Resolver merges by strongest evidence, not by chronology.
+- **Status precedence for appointments (DD-017, asymmetric):** `missed`/`cancelled` beat `attended`/`scheduled`/`unknown`; within negatives `missed > cancelled`; within positives `attended > scheduled > unknown`; ties broken by `source_note_date` recency. Replaces the earlier monotonic `attended > missed > cancelled > scheduled` rule, which silently upgraded `missed → attended`. Resolver merges by strongest evidence, not by chronology.
+- **Appointment merge key (DD-016):** `(claim_id, encounter_date exact, parties_overlap ≥ 1)`. The LLM emits a `parties: tuple[str, ...]` per appointment (named people + orgs); resolver compares using deterministic normalization (strip honorifics + degree suffixes, lowercase, `&`→`and`). No fuzzy matching, no `± window`. Replaces the earlier `canonical_provider + anchor_date ± window` design.
 - **Financial data never goes through the LLM.** Q3 (reserve changes) is pure regex against templated text — see `q3-reserve-changes.md`. Money + LLM = silent rounding errors.
 - **SQLite via stdlib `sqlite3` (Python).** Date math uses `julianday(...) - julianday(...)`. JSON access uses `json_extract(attributes, '$.field')`. Expression indexes go on the hot `json_extract` paths.
 - **One pipeline, not branched by claim type.** Claim-type-specific behavior lives in prompts and resolver parameters, not in a forked pipeline. (User explicitly considered and rejected a per-claim-type pipeline fork.)
@@ -68,20 +69,4 @@ A few observed patterns. Honoring these saves rework:
 - **Will ask for record-keeping when it matters.** New design decisions get a DD entry; existing DDs get cross-referenced. Don't invent a DD without asking.
 
 ---
-
-## State of the repo
-
-**Design-complete (committed in md under `./docs/`):**
-- Domain model (Claim + Event with 4 active types)
-- Fifteen accepted design decisions
-- Per-query feasibility for Q1–Q4
-- Pipeline architecture (5 stages: Ingest → Extract → Normalize → Resolve → Query)
-- Source-data analysis on the two sample claims
-
-**Implementation progress** (tracked in `./docs/implementation-plan.md`):
-- Phase 0 ✅ scaffold (Python 3.12, `uv`, `pytest`, package-per-stage layout)
-- Phase 1 ✅ pydantic v2 domain model (`src/claims/models/`)
-- Phase 2+ pending — storage, loader, normalizer, extractors, resolver, query
-
-When implementation begins, the canned query function signatures already exist in the query feasibility docs — treat them as contracts.
 

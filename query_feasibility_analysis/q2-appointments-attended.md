@@ -1,5 +1,18 @@
 # Q2 — How many appointments were attended?
 
+> **Post-DD-016/DD-017 note.** This document was authored before
+> DD-016 (parties-set merge key) and DD-017 (asymmetric status
+> precedence). Treat references to `provider`, `canonical_provider`,
+> "provider canonicalization", `± window` / "fuzzy date window", and
+> the monotonic `attended > missed > cancelled > scheduled`
+> precedence as historical context. The live design is:
+> - Merge key = `(claim_id, encounter_date exact, parties_overlap ≥ 1)`
+>   on a LLM-emitted `parties` list (DD-016).
+> - Status precedence is **asymmetric**: `missed`/`cancelled` beat
+>   `attended`/`scheduled`/`unknown`; ties broken by `source_note_date`
+>   recency (DD-017).
+> See `docs/resolver.md §6` and `design-decisions.md` DD-016/DD-017.
+
 ## 1. What the question is really asking
 
 A count of distinct medical appointments where the claimant actually showed

@@ -341,8 +341,9 @@ triggers **three** extractors:
 | `ReturnToWorkExtractor` | `canHandle` fails (no RTW keywords); no LLM call |
 
 The Marker output for 4/11 and the Prose output for 4/11 are both sent
-to the Resolver, which merges them by `(claim_id, canonical_provider,
-4/11 ± 7d)` into one event with both `occurred_on` and `status` set.
+to the Resolver, which merges them by the DD-016 key
+`(claim_id, encounter_date=4/11 exact, parties_overlap ≥ 1)` into one
+event with both `occurred_on` and `status` set.
 
 **The Extractor stage never tries to be smart about this overlap.**
 Duplication is expected and cheap. Pushing dedup into the Extractor

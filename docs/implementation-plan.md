@@ -187,13 +187,17 @@ Q1 dedup, Q2 status precedence, Q3 `delta` derivation, Q4 cross-note
 merge.
 
 - `claims.resolver.resolve(events) -> list[ResolvedEvent]`.
-- Match-key construction per event type.
-- Merge with status precedence `attended > missed > cancelled >
-  scheduled`.
+- Match-key construction per event type. For `appointment`: DD-016
+  `(claim_id, encounter_date exact, parties_overlap ≥ 1)` — no
+  `± window`, no provider-string canonicalization (those were the
+  original Phase-9 plan, replaced after the Phase-12 audit).
+- Merge with **asymmetric** status precedence (DD-017):
+  `missed`/`cancelled` beat `attended`/`scheduled`/`unknown`;
+  ties broken by `source_note_date` recency.
 - `delta` derivation for reserve changes (Q3 first-set edge case).
-- Fuzzy-date window for cross-note merges.
-- Provider canonicalization stub (full impl deferred — only needs to
-  not break Q4 on the samples).
+- `parties` normalization (`resolver/parties.py`): strip honorifics
+  + degree suffixes + punctuation, lowercase, `&`→`and`, exact set
+  intersection.
 
 **Exit:** Q2 and Q3 fully answerable on the sample corpus. Q4
 partially answerable (one of the two events still missing —
@@ -258,7 +262,7 @@ These were explicit non-goals in the design phase (DD-009, DD-012)
 and remain so:
 
 - Eval harness with corpus-scale precision/recall metrics.
-- Provider canonicalization beyond the bare minimum Q4 needs.
+- Tightened parties-overlap (person-only) — deferred DD-016 follow-up.
 - Future event types sketched in data-modeling.md §4.5
   (medical_status, work_capacity, claim_status_change, etc.).
 - Per-claim-type pipeline forks.

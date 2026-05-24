@@ -130,7 +130,7 @@ not built (DD-012; mirrors `data-modeling.md §4.5`).
 | `event_type` | `attributes` payload | Drives query |
 |--------------|----------------------|--------------|
 | `reserve_change` | `bucket` ("Indemnity / Lost Time"), `previous_amount`, `new_amount`, `delta` | Q3 |
-| `appointment` | `provider`, `specialty`, `scheduled_notice_date`, `scheduled_for_date`, `occurred_on`, `status`, `appointment_type` | Q2, Q4 |
+| `appointment` | `parties` (DD-016), `specialty`, `scheduled_notice_date`, `scheduled_for_date`, `occurred_on`, `status`, `appointment_type`, `source_note_date` (DD-017) | Q2, Q4 |
 | `return_to_work` | `duty_type` (modified / full), `role` | Q1 |
 | `rtw_terminal` | `reason` (`ptd` / `deceased` / `separated` / `closed_no_rtw`) | Q1 (definitive negative) |
 
@@ -189,17 +189,21 @@ zero or more candidate `Event`s out.
 the final event set. A scheduling notice and a later "she attended" note
 about the same visit become one `appointment` event with both scheduling
 dates and `occurred_on` populated. Matching key (per event type) — for
-`appointment`: `(claim_id, canonical_provider, anchor_date ± window)`.
-Status precedence on conflict: `attended > missed > cancelled > scheduled`.
+`appointment` (DD-016): `(claim_id, encounter_date exact, parties_overlap ≥ 1)`,
+where `parties` is the LLM-emitted set of named people/orgs and overlap
+uses deterministic normalization (no fuzzy matching, no ±N window).
+Status precedence on conflict is **asymmetric** (DD-017):
+`missed`/`cancelled` beat `attended`/`scheduled`/`unknown`; within the
+negative tier `missed > cancelled`; within positives `attended > scheduled
+> unknown`; ties broken by the more recent `source_note_date`.
 This stage also computes derived fields like `reserve_change.delta` once
-events are ordered, and handles provider canonicalization that prevents
-merge-key fragmentation at corpus scale.
+events are ordered.
 
 The Resolver is a pure module (no LLM, no I/O) with a five-pass algorithm
 and a pluggable matching-strategy interface so per-event-type accuracy can
 evolve without touching extractors. **See `resolver.md` for the full
-algorithm, match-key construction, merge rules, canonicalization
-algorithm, failure modes, and testability story.**
+algorithm, match-key construction, merge rules, failure modes, and
+testability story.**
 
 **4.5 Store.** Writes `Claim` and `Event` to SQLite. Idempotent: re-ingesting
 a claim replaces its rows, keyed by `claim_id`.

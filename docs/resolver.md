@@ -32,7 +32,7 @@ is the only place.
 | Query | What it needs from the Resolver |
 |---|---|
 | Q1 | Dedup RTW restatements; drop relative-date / forward-confirmation duplicates of the explicit dated RTW |
-| Q2 | Provider canonicalization, status precedence, cross-note dedup of 5+ appointment surface forms |
+| Q2 | Party-set merge (DD-016), asymmetric status precedence (DD-017), cross-note dedup of 5+ appointment surface forms |
 | Q3 | Chain reserve changes by bucket to derive `delta`; drop `delta=0` restatements |
 | Q4 | Merge schedule + visit events into one row with three date fields; latest-notice rule for reschedules |
 
@@ -80,7 +80,7 @@ affects the match key happens here.
 | Event type | Match key |
 |---|---|
 | `reserve_change` | `(claim_id, canonical_bucket, source_note_id)` — each Reserving note is its own event |
-| `appointment` | `(claim_id, canonical_provider, anchor_date ± window)`; `anchor_date = scheduled_for_date ?? occurred_on`; see §6 for window |
+| `appointment` | DD-016: `(claim_id, encounter_date exact, parties_overlap ≥ 1)`; `encounter_date = scheduled_for_date ?? occurred_on`; see §6 for the parties-overlap rule (supersedes the earlier `canonical_provider, anchor_date ± window` design) |
 | `return_to_work` | `(claim_id, event_date, duty_type)` |
 | `rtw_terminal` | `(claim_id, reason)` — at most one per claim |
 
@@ -91,13 +91,19 @@ affects the match key happens here.
   different and Q3's rule extractor doesn't emit them — if a future
   change does, Pass 4's `delta = 0` drop catches them.
 - **`appointment`** — most complex. (1) Union the three date fields.
-  (2) Resolve status by precedence: `attended > missed > cancelled >
-  scheduled` — *strength*, not chronology; a scheduling notice cannot
-  demote an "attended" record. (3) Reschedules: take the **latest**
-  `scheduled_notice_date` before the visit (Q4 §5); earlier notices
-  stay in history but don't feed Q4's gap math. (4) Take the most
-  specific provider/specialty form (`"Dr. Harmon, Spine"` over `"the
-  spine doctor"`). (5) Preserve `appointment_type` once set.
+  (2) Resolve status by DD-017 **asymmetric** precedence:
+  `missed`/`cancelled` beat `attended`/`scheduled`/`unknown`; within
+  negatives `missed > cancelled`; within positives
+  `attended > scheduled > unknown`; ties broken by the more recent
+  `source_note_date`. Replaces the earlier monotonic-up rule
+  (`attended > missed > cancelled > scheduled`), which silently
+  upgraded `missed → attended` — see DD-017.
+  (3) Reschedules: take the **latest** `scheduled_notice_date` before
+  the visit (Q4 §5); earlier notices stay in history but don't feed
+  Q4's gap math. (4) Union `parties` across the group, deduped by
+  normalized form, preserving first-seen order; longest surface form
+  per identity wins as the display label. (5) Preserve
+  `appointment_type` once set.
 - **`return_to_work`** — if the group has an explicit dated form (claim 1
   L9: `"EE returned to modified duty on 11/10/25"`) and a relative-date
   or forward-confirmation form, keep the dated one and drop the others.
@@ -139,11 +145,16 @@ interface Resolver {
 }
 ```
 
-MVP registers: `reserve_change` → identity; `appointment` → proximity
-(two strategies registered, N=7 for Q2 dedup, N=14 for Q4 merge);
+MVP registers: `reserve_change` → identity; `appointment` →
+parties-set merge (DD-016: `(encounter_date exact, parties_overlap)`
+— single strategy; no separate Q2/Q4 windows);
 `return_to_work` → identity-with-form-priority; `rtw_terminal` →
-identity-with-precedence. Per-specialty windows (Q4 §9) drop in as one
-new strategy class.
+identity-with-precedence. The original plan registered two
+proximity strategies (N=7 for Q2, N=14 for Q4) — DD-016 collapsed
+both to one exact-date strategy because the windows were absorbing
+LLM mis-attributions and producing cross-date false merges.
+Per-specialty windows (Q4 §9) remain a future extension point if
+real corpora later require date drift.
 
 **Why this pattern:**
 
@@ -167,6 +178,12 @@ new strategy class.
 ---
 
 ## 5. Provider canonicalization
+
+> **Superseded by DD-016.** The string-canonicalization design below
+> was replaced by the LLM-emitted `parties` set + deterministic
+> normalization described in §6. Kept here for historical context —
+> the failure modes it documents (fragmenting merge keys, specialty
+> fallback collisions) are what motivated DD-016.
 
 The corpus-scale failure mode for Q2 and Q4. Same person appears as
 `Dr. Caldwell`, `Dr. Caldwell, MD`, `Caldwell`, `the neurosurgeon`,
@@ -292,11 +309,11 @@ silent coercion.
 | Failure | Behavior |
 |---|---|
 | Two `rtw_terminal` candidates, different `reason` | Keep most definitive; flag `rtw_terminal_conflict` |
-| Two providers, same canonical name, different specialties | Don't merge; flag low-confidence canonicalization |
-| Hanging `scheduled` event (no visit within 60 days) | Promote to `unknown`/`missed`; excluded from Q4 |
+| Hanging `scheduled` event (no visit within 60 days) | Kept as `scheduled` — evidence-only promotion rule forbids silent demotion; excluded from Q4 by lack of an `occurred_on` |
 | `delta = 0` reserve change | Dropped silently — documented restatement behavior, not an error |
 | Same-minute reserve updates, different buckets (claim 1 L392+L396) | Both kept — different match keys, never group |
-| Canonicalized provider name not seen elsewhere in the claim | Emit with low-confidence flag |
+| ~~Two providers, same canonical name, different specialties~~ | Obsolete — DD-016 removed string canonicalization; identity is set-overlap on `parties` |
+| ~~Canonicalized provider name not seen elsewhere in the claim~~ | Obsolete — DD-016 removed string canonicalization |
 | **Same claim, same date, two different clinicians at same facility** | **MERGED into one event (DD-016 known failure mode). Both clinicians stay in merged `parties` list — collapse is auditable. Q2 undercount = 1 for that day. See §6 above.** |
 
 Flags stored as `attributes.data_quality_flags[]`. A corpus-wide health

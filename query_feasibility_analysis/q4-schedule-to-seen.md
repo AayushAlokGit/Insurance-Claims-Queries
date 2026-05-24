@@ -1,5 +1,15 @@
 # Q4 — How long does it take to see a provider once scheduled?
 
+> **Post-DD-016 note.** Written before the parties-set merge key was
+> adopted. References to provider proximity strategies (N=7 / N=14
+> windows), `(claim, provider, date ± window)` merge keys, and
+> per-specialty window tuning describe the *original* MVP plan.
+> The live design merges appointment events by
+> `(claim_id, encounter_date exact, parties_overlap ≥ 1)` — no date
+> window. Per-specialty windows remain a deferred extension point if
+> a real corpus shows the exact-date rule is too tight.
+> See `docs/resolver.md §6` and `design-decisions.md` DD-016.
+
 ## 1. What the question is really asking
 
 For each appointment that was *both* scheduled and attended: the gap, in

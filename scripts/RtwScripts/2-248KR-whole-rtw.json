@@ -1,0 +1,18 @@
+{
+  "claim_id": "2-248KR",
+  "method": "single whole-claim LLM call",
+  "date_of_loss": "2024-12-30",
+  "q1": {
+    "status": "returned",
+    "days": 238,
+    "rtw_date": "2025-08-25",
+    "duty_type": "modified",
+    "role": null,
+    "source_note_dates": [
+      "2025-08-19",
+      "2025-08-21",
+      "2025-08-26"
+    ],
+    "evidence_quote": "Per employer HR Director, they will now accommodate the LD restrictions per the 5/21 report - 20 lb lift limit w/ frequent position changes. HR Director has requested clmt RTW on Monday, 8/25."
+  }
+}

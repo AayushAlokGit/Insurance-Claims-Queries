@@ -1,0 +1,19 @@
+{
+  "claim_id": "1-29RT",
+  "method": "single whole-claim LLM call",
+  "date_of_loss": "2024-12-21",
+  "q1": {
+    "status": "returned",
+    "days": 324,
+    "rtw_date": "2025-11-10",
+    "duty_type": "modified",
+    "role": "scheduling coordinator",
+    "source_note_dates": [
+      "2025-11-07",
+      "2025-11-14",
+      "2025-11-21",
+      "2025-12-05"
+    ],
+    "evidence_quote": "EE returned to modified duty on 11/10/25 as a scheduling coordinator with the insured."
+  }
+}

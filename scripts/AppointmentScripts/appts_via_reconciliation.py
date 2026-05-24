@@ -53,8 +53,10 @@ def _serialize_appt(ev) -> dict:  # type: ignore[no-untyped-def]
             else None
         ),
         "parties": list(a.parties),
-        "source_note_dates": [d.isoformat() for d in a.source_note_dates],
-        "evidence_quote": a.evidence_quote,
+        "evidence": [
+            {"note_date": e.note_date.isoformat(), "quote": e.quote}
+            for e in a.evidence
+        ],
     }
 
 

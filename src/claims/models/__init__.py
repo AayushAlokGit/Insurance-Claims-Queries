@@ -9,6 +9,7 @@ See data-modeling.md for the rationale behind every field.
 from claims.models.claim import Claim
 from claims.models.event import (
     AppointmentAttributes,
+    AppointmentEvidence,
     AppointmentStatus,
     AppointmentType,
     Event,
@@ -24,6 +25,7 @@ from claims.models.note import Note
 
 __all__ = [
     "AppointmentAttributes",
+    "AppointmentEvidence",
     "AppointmentStatus",
     "AppointmentType",
     "Claim",

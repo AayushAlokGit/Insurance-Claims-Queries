@@ -25,7 +25,7 @@ from claims.extractor.appointment_reconciliation import (
     _precluster,
     reconcile_appointments,
 )
-from claims.models import AppointmentAttributes, Event
+from claims.models import AppointmentAttributes, AppointmentEvidence, Event
 
 
 # --- _normalize_party ------------------------------------------
@@ -68,6 +68,10 @@ def _appt(
     evidence_quote: str | None = None,
 ) -> Event:
     anchor = occurred_on or scheduled_for_date or date(2025, 1, 1)
+    evidence = tuple(
+        AppointmentEvidence(note_date=nd, quote=evidence_quote or "")
+        for nd in source_note_dates
+    )
     return Event(
         event_id=eid,
         claim_id="C",
@@ -78,8 +82,7 @@ def _appt(
             occurred_on=occurred_on,
             scheduled_for_date=scheduled_for_date,
             status=status,  # type: ignore[arg-type]
-            source_note_dates=source_note_dates,
-            evidence_quote=evidence_quote,
+            evidence=evidence,
         ),
         extraction_method="llm",
     )
@@ -313,7 +316,6 @@ def test_reconcile_merges_off_by_one_and_computes_notice() -> None:
             _ClusterResolution(
                 status="attended",
                 parties=["Harmon"],
-                evidence_quote="Date of Appointment: 6-27-25",
             )
         ]
     )
@@ -353,7 +355,6 @@ def test_reconcile_drops_generic_parties_post_llm() -> None:
             _ClusterResolution(
                 status="attended",
                 parties=["Caldwell", "Patient A", "Ortho"],
-                evidence_quote="Dr. Caldwell on April 22, 2025",
             )
         ]
     )
@@ -381,7 +382,6 @@ def test_reconcile_scheduled_status_populates_scheduled_for_date() -> None:
             _ClusterResolution(
                 status="scheduled",
                 parties=["Farano"],
-                evidence_quote="NOV is set for 9/23",
             )
         ]
     )

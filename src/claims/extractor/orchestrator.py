@@ -40,7 +40,9 @@ def _summarize(ev: Event) -> str:
             else "?"
         )
         parties = "|".join(attrs.parties) or "-"
-        quote = (attrs.evidence_quote or "").replace("\n", " ")[:80]
+        quote = (
+            attrs.evidence[0].quote if attrs.evidence else ""
+        ).replace("\n", " ")[:80]
         return (
             f"appointment date={enc} kind={kind} status={attrs.status} "
             f"parties=[{parties}] evidence=\"{quote}\""

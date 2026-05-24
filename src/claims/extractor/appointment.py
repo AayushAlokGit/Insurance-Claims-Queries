@@ -35,7 +35,12 @@ from pydantic import BaseModel, ConfigDict, Field
 from claims.extractor._evidence import EVIDENCE_QUOTE_GUIDANCE
 from claims.llm import StructuredLLM, quote_in_body
 from claims.llm.base import LLMError
-from claims.models import AppointmentAttributes, Event, Note
+from claims.models import (
+    AppointmentAttributes,
+    AppointmentEvidence,
+    Event,
+    Note,
+)
 
 
 # --- Prefilter (DD-019) ------------------------------------------
@@ -239,22 +244,25 @@ class AppointmentExtractor:
             seen.add(stripped.lower())
             parties.append(stripped)
 
+        evidence = (
+            AppointmentEvidence(
+                note_date=note.note_date, quote=appt.evidence_quote
+            ),
+        )
         if appt.status == "scheduled":
             attrs = AppointmentAttributes(
                 parties=tuple(parties),
                 scheduled_notice_date=note.note_date,
                 scheduled_for_date=appt.appointment_date,
                 status="scheduled",
-                source_note_dates=(note.note_date,),
-                evidence_quote=appt.evidence_quote,
+                evidence=evidence,
             )
         else:
             attrs = AppointmentAttributes(
                 parties=tuple(parties),
                 occurred_on=appt.appointment_date,
                 status=appt.status,
-                source_note_dates=(note.note_date,),
-                evidence_quote=appt.evidence_quote,
+                evidence=evidence,
             )
         return Event(
             event_id=str(uuid.uuid4()),

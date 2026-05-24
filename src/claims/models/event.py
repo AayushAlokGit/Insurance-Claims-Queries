@@ -62,17 +62,27 @@ class ReserveChangeAttributes(_AttributesBase):
     evidence_quote: str | None = None
 
 
+class AppointmentEvidence(_AttributesBase):
+    """One (note_date, quote) pair contributing to an appointment.
+
+    Merged appointments keep one entry per contributing note so
+    provenance survives reconciliation. Single-source events have
+    a one-element tuple."""
+
+    note_date: date
+    quote: str
+
+
 class AppointmentAttributes(_AttributesBase):
     """Q2 + Q4 payload. Three date fields support the Resolver's
     schedule-to-seen merge (data-modeling.md §4.2). `parties` per
-    DD-016: the LLM emits the set of named individuals and
-    organizations involved in this encounter; the resolver merges
-    by claim + encounter_date + party-set overlap. Empty list
-    means no identifiable party (the merge falls to date alone).
-    `source_note_dates` per DD-017: the sorted tuple of note dates
-    that contributed to this event. Single-source events have one
-    entry; merged events keep one per contributing note for audit.
-    The DD-017 recency tiebreaker uses `max(source_note_dates)`."""
+    DD-016: the set of named individuals and organizations involved
+    in this encounter. Empty tuple means no identifiable party.
+
+    `evidence` holds (note_date, quote) pairs — one per contributing
+    note. Single-source per-note events have a one-element tuple;
+    reconciled events union all contributors. The recency tiebreaker
+    uses `max(e.note_date for e in evidence)`."""
 
     type: Literal["appointment"] = "appointment"
     parties: tuple[str, ...] = ()
@@ -82,8 +92,14 @@ class AppointmentAttributes(_AttributesBase):
     occurred_on: date | None = None
     status: AppointmentStatus
     appointment_type: AppointmentType | None = None
-    source_note_dates: tuple[date, ...] = ()
-    evidence_quote: str | None = None
+    evidence: tuple[AppointmentEvidence, ...] = ()
+
+    @property
+    def source_note_dates(self) -> tuple[date, ...]:
+        """Sorted contributing note dates derived from `evidence`.
+        Preserved as a property so callers that grouped by note-date
+        membership still work."""
+        return tuple(sorted({e.note_date for e in self.evidence}))
 
     @property
     def encounter_date(self) -> date | None:

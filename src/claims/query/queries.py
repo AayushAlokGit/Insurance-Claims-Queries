@@ -10,6 +10,7 @@ from decimal import Decimal
 from sqlite3 import Connection
 from statistics import median
 
+from claims.models import AppointmentEvidence
 from claims.query.types import (
     Q1NeverReturned,
     Q1Pending,
@@ -124,6 +125,33 @@ def _parse_parties(raw: str | None) -> list[str]:
     return [str(x) for x in loaded if isinstance(x, str)]
 
 
+def _parse_evidence(raw: str | None) -> list[AppointmentEvidence]:
+    """Decode the stored `evidence` JSON array into typed pairs.
+    Malformed entries are silently skipped."""
+    if raw is None:
+        return []
+    try:
+        loaded = json.loads(raw)
+    except (TypeError, ValueError):
+        return []
+    if not isinstance(loaded, list):
+        return []
+    out: list[AppointmentEvidence] = []
+    for x in loaded:
+        if not isinstance(x, dict):
+            continue
+        try:
+            out.append(
+                AppointmentEvidence(
+                    note_date=date.fromisoformat(x["note_date"]),
+                    quote=str(x["quote"]),
+                )
+            )
+        except (KeyError, ValueError, TypeError):
+            continue
+    return out
+
+
 def _parse_dates(raw: str | None) -> list[date]:
     """Decode a JSON array of ISO date strings into a list[date].
     Malformed entries are silently skipped so a single garbled
@@ -156,8 +184,7 @@ def q2_appointments_attended(conn: Connection, claim_id: str) -> Q2Result:
                json_extract(attributes, '$.parties')           AS parties,
                json_extract(attributes, '$.specialty')         AS specialty,
                json_extract(attributes, '$.appointment_type')  AS appointment_type,
-               json_extract(attributes, '$.source_note_dates') AS source_note_dates,
-               json_extract(attributes, '$.evidence_quote')    AS evidence_quote
+               json_extract(attributes, '$.evidence')          AS evidence
         FROM event
         WHERE claim_id = ?
           AND event_type = 'appointment'
@@ -174,8 +201,7 @@ def q2_appointments_attended(conn: Connection, claim_id: str) -> Q2Result:
             appointment_type=r["appointment_type"],
             event_id=r["event_id"],
             extraction_method=r["extraction_method"],
-            source_note_dates=_parse_dates(r["source_note_dates"]),
-            evidence_quote=r["evidence_quote"],
+            evidence=_parse_evidence(r["evidence"]),
         )
         for r in rows
     ]
@@ -256,8 +282,7 @@ def q4_schedule_to_seen(conn: Connection, claim_id: str) -> Q4Result:
                json_extract(attributes, '$.scheduled_notice_date') AS notice,
                json_extract(attributes, '$.scheduled_for_date')    AS booked,
                json_extract(attributes, '$.occurred_on')           AS occurred,
-               json_extract(attributes, '$.source_note_dates')     AS source_note_dates,
-               json_extract(attributes, '$.evidence_quote')        AS evidence_quote
+               json_extract(attributes, '$.evidence')              AS evidence
         FROM event
         WHERE claim_id = ?
           AND event_type = 'appointment'
@@ -292,8 +317,7 @@ def q4_schedule_to_seen(conn: Connection, claim_id: str) -> Q4Result:
                 on_time_delta_days=on_time_delta,
                 event_id=r["event_id"],
                 extraction_method=r["extraction_method"],
-                source_note_dates=_parse_dates(r["source_note_dates"]),
-                evidence_quote=r["evidence_quote"],
+                evidence=_parse_evidence(r["evidence"]),
             )
         )
         lags.append(lag_days)

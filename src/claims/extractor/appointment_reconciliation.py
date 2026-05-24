@@ -6,12 +6,13 @@ Three stages:
    date (±1 day) AND party overlap (with empty-party absorption
    on one side only). Dateless candidates stay singletons.
 2. **Per-cluster LLM call.** One small focused call per cluster
-   that picks status (DD-017 precedence), cleans parties, and
-   chooses an evidence quote.
-3. **Date fields (rules).** Encounter date = mode of the
-   contributing candidates' dates. `scheduled_notice_date` =
+   that picks status (DD-017 precedence) and cleans parties.
+3. **Date fields + evidence (rules).** Encounter date = mode of
+   the contributing candidates' dates. `scheduled_notice_date` =
    earliest contributing `note_date` not later than the encounter
-   (retrospective recaps are excluded by construction).
+   (retrospective recaps are excluded by construction). Evidence
+   pairs (note_date, quote) are unioned across contributors — no
+   single quote is privileged.
 """
 
 from __future__ import annotations
@@ -28,6 +29,7 @@ from claims.llm import StructuredLLM
 from claims.llm.base import LLMError
 from claims.models import (
     AppointmentAttributes,
+    AppointmentEvidence,
     AppointmentStatus,
     Event,
 )
@@ -122,13 +124,13 @@ def _precluster(candidates: list[Event]) -> list[list[Event]]:
 
 
 class _ClusterResolution(BaseModel):
-    """LLM output: status + cleaned parties + one evidence quote."""
+    """LLM output: status + cleaned parties. Evidence is assembled
+    deterministically downstream by unioning contributing pairs."""
 
     model_config = ConfigDict(extra="forbid")
 
     status: AppointmentStatus
     parties: list[str] = Field(default_factory=list)
-    evidence_quote: str
 
 
 _SYSTEM_PROMPT = """You are resolving one cluster of appointment candidates from a workers'-comp claim. Every candidate describes the SAME real encounter — clustering is already done.
@@ -137,9 +139,7 @@ _SYSTEM_PROMPT = """You are resolving one cluster of appointment candidates from
 
 2. PARTIES. Union the named parties across candidates. Strip honorifics ("Dr.", "Mr.") and degree suffixes. Treat "Dr. Harmon" and "Harmon" as one party. DROP claimant labels (claimant, patient, Patient A, EE, IE, IW), unnamed roles (FCM, TCM, the doctor, interpreter), and specialty words used as names (Ortho, Spine, Pain Mgmt, Neurology). Empty list if no named party survives.
 
-3. EVIDENCE QUOTE. One verbatim quote from a contributing candidate that best justifies the canonical entry — prefer quotes naming both the date and a party.
-
-You are NOT responsible for clustering, date fields, or notice date — the caller handles those.
+You are NOT responsible for clustering, date fields, notice date, or evidence quotes — the caller handles those.
 """
 
 
@@ -148,12 +148,13 @@ def _cluster_prompt(cluster: list[Event]) -> str:
     for i, ev in enumerate(cluster):
         a = ev.attributes
         assert isinstance(a, AppointmentAttributes)
-        nd = a.source_note_dates[0] if a.source_note_dates else None
+        nd = a.evidence[0].note_date if a.evidence else None
+        quote = a.evidence[0].quote if a.evidence else ""
         anchor = a.scheduled_for_date or a.occurred_on
         lines.append(
             f"  [{i}] note_date={nd} status={a.status} "
             f"appointment_date={anchor} parties={list(a.parties)} "
-            f"evidence={(a.evidence_quote or '')[:200]!r}"
+            f"evidence={quote[:200]!r}"
         )
     return "\n".join(lines)
 
@@ -201,10 +202,10 @@ def _notice_date(
     if encounter is None:
         return None
     eligible = [
-        nd
+        e.note_date
         for ev in cluster
-        for nd in ev.attributes.source_note_dates  # type: ignore[union-attr]
-        if nd <= encounter
+        for e in ev.attributes.evidence  # type: ignore[union-attr]
+        if e.note_date <= encounter
     ]
     return min(eligible) if eligible else None
 
@@ -247,11 +248,18 @@ def reconcile_appointments(
         else:  # scheduled
             occurred_on, scheduled_for_date = None, encounter
 
-        contrib_dates: set[date] = set()
+        # Union evidence pairs across contributors, dedup by
+        # (note_date, quote). Sort by note_date for stable output.
+        seen_evidence: set[tuple[date, str]] = set()
+        evidence_items: list[AppointmentEvidence] = []
         for ev in cluster:
-            contrib_dates.update(
-                ev.attributes.source_note_dates  # type: ignore[union-attr]
-            )
+            for item in ev.attributes.evidence:  # type: ignore[union-attr]
+                key = (item.note_date, item.quote)
+                if key in seen_evidence:
+                    continue
+                seen_evidence.add(key)
+                evidence_items.append(item)
+        evidence_items.sort(key=lambda e: (e.note_date, e.quote))
 
         attrs = AppointmentAttributes(
             parties=tuple(parties),
@@ -259,8 +267,7 @@ def reconcile_appointments(
             scheduled_for_date=scheduled_for_date,
             occurred_on=occurred_on,
             status=resolution.status,
-            source_note_dates=tuple(sorted(contrib_dates)),
-            evidence_quote=resolution.evidence_quote or None,
+            evidence=tuple(evidence_items),
         )
         event_date = (
             occurred_on or scheduled_for_date or cluster[0].event_date

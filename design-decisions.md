@@ -210,10 +210,10 @@ Identity-merge on `(claim_id, event_date, duty_type)` kept duplicates when the L
 
 ---
 
-## DD-023 — Widen `(note_date, quote)` evidence pairs to RTW + RTW-terminal
+## DD-023 — Widen `(note_date, quote)` evidence pairs to every event type
 **Accepted · 2026-05-24**
 
-DD-020 scoped structured `evidence: tuple[EventEvidence, ...]` to appointments only. After DD-022 collapsed two duplicate RTW events on claim 1 into one merged event, the surviving event's single `evidence_quote` dropped four of five contributing notes' quotes — the same auditability hole DD-020 fixed for appointments, now visible for RTW. Extend the same shape to `ReturnToWorkAttributes` and `RTWTerminalAttributes`; rename `AppointmentEvidence` → `EventEvidence` since the type is generic. `source_note_dates` and `evidence_quote` survive as derived `@property`s. The resolver `_merge` unions evidence deterministically (dedup by `(note_date, quote)`, sort by `note_date`); the per-note extractors emit one-element tuples. Q1 output (`Q1Returned`, `Q1NeverReturned`) ships the full evidence list in place of `evidence_quote` + `source_note_dates`. Reserve-change events untouched — they aren't merged across notes the same way and the gain doesn't yet justify the schema churn (DD-012 YAGNI).
+DD-020 scoped structured `evidence: tuple[EventEvidence, ...]` to appointments only. Extend the same shape to **every** event type — `reserve_change`, `return_to_work`, `rtw_terminal` — for a uniform evidence surface. Single-source events carry a one-element tuple; merged events union one entry per contributing note (dedup by `(note_date, quote)`, sort by `note_date`). `AppointmentEvidence` renamed to `EventEvidence`. `source_note_dates` and `evidence_quote` survive as derived `@property`s on every attributes class. Q1 and Q3 outputs ship the full evidence list in place of scalar `evidence_quote` + `source_note_dates`.
 
 ---
 

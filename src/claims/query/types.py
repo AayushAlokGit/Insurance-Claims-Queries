@@ -90,8 +90,7 @@ class Q3Swing(BaseModel):
     author: str | None = None
     event_id: str | None = None
     extraction_method: str | None = None
-    source_note_dates: list[date] = Field(default_factory=list)
-    evidence_quote: str | None = None
+    evidence: list[EventEvidence] = Field(default_factory=list)
 
 
 class Q3BucketSummary(BaseModel):

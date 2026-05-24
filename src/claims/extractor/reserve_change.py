@@ -14,7 +14,7 @@ import re
 import uuid
 from decimal import Decimal
 
-from claims.models import Event, Note, ReserveChangeAttributes
+from claims.models import Event, EventEvidence, Note, ReserveChangeAttributes
 
 _PATTERN = re.compile(
     r"(?P<coverage>Indemnity|Expense-Litigation)\s+for\s+"
@@ -47,8 +47,12 @@ class ReserveChangeExtractor:
                         bucket=bucket,
                         new_amount=new_amount,
                         author=note.author,
-                        source_note_dates=(note.note_date,),
-                        evidence_quote=m.group(0).strip(),
+                        evidence=(
+                            EventEvidence(
+                                note_date=note.note_date,
+                                quote=m.group(0).strip(),
+                            ),
+                        ),
                     ),
                     extraction_method="rule",
                 )

@@ -98,7 +98,11 @@ def _can_join(seed: Event, cand: Event) -> bool:
         return False
     s_parties = _norm_set(seed.attributes.parties)  # type: ignore[union-attr]
     c_parties = _norm_set(cand.attributes.parties)  # type: ignore[union-attr]
-    return not s_parties or not c_parties or bool(s_parties & c_parties)
+    if s_parties and c_parties:
+        return bool(s_parties & c_parties)        # both named → must overlap
+    if not s_parties and not c_parties:
+        return s_date == c_date                   # neither named → same date then can join
+    return True # one named other no names , join if within 3 days
 
 
 def _precluster(candidates: list[Event]) -> list[list[Event]]:

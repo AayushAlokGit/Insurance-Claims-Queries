@@ -44,13 +44,25 @@ class _AttributesBase(BaseModel):
     model_config = ConfigDict(frozen=True, extra="forbid")
 
 
+class EventEvidence(_AttributesBase):
+    """One (note_date, quote) pair contributing to an event.
+
+    Used by every event type — single-source events have a
+    one-element tuple, merged/reconciled events union one entry
+    per contributing note. Uniform across reserve_change,
+    appointment, return_to_work, and rtw_terminal (DD-020/023)."""
+
+    note_date: date
+    quote: str
+
+
 class ReserveChangeAttributes(_AttributesBase):
     """Q3 payload. previous_amount and delta are derived by the
     Resolver after events are ordered (data-modeling.md §4.1).
-    `source_note_dates` is the sorted tuple of note dates that
-    contributed to this event — paired with `evidence_quote` for
-    debugging. Single-source events have one entry; merged events
-    have one per contributing note."""
+    `evidence` holds `(note_date, quote)` pairs — one per
+    contributing note. Reserve events don't merge today, so the
+    tuple is one-element; `source_note_dates` and `evidence_quote`
+    survive as derived properties for callers."""
 
     type: Literal["reserve_change"] = "reserve_change"
     bucket: str
@@ -58,20 +70,15 @@ class ReserveChangeAttributes(_AttributesBase):
     previous_amount: Decimal | None = None
     delta: Decimal | None = None
     author: str | None = None
-    source_note_dates: tuple[date, ...] = ()
-    evidence_quote: str | None = None
+    evidence: tuple[EventEvidence, ...] = ()
 
+    @property
+    def source_note_dates(self) -> tuple[date, ...]:
+        return tuple(sorted({e.note_date for e in self.evidence}))
 
-class EventEvidence(_AttributesBase):
-    """One (note_date, quote) pair contributing to a merged event.
-
-    Used by all event types whose merge unions evidence across
-    contributing notes (appointments — DD-020; return_to_work and
-    rtw_terminal — same pattern, extended scope). Single-source
-    events have a one-element tuple."""
-
-    note_date: date
-    quote: str
+    @property
+    def evidence_quote(self) -> str | None:
+        return self.evidence[0].quote if self.evidence else None
 
 
 class AppointmentAttributes(_AttributesBase):

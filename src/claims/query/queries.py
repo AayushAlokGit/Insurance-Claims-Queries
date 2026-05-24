@@ -148,29 +148,6 @@ def _parse_evidence(raw: str | None) -> list[EventEvidence]:
     return out
 
 
-def _parse_dates(raw: str | None) -> list[date]:
-    """Decode a JSON array of ISO date strings into a list[date].
-    Malformed entries are silently skipped so a single garbled
-    audit field does not break the whole query result."""
-    if raw is None:
-        return []
-    try:
-        loaded = json.loads(raw)
-    except (TypeError, ValueError):
-        return []
-    if not isinstance(loaded, list):
-        return []
-    out: list[date] = []
-    for x in loaded:
-        if not isinstance(x, str):
-            continue
-        try:
-            out.append(date.fromisoformat(x))
-        except ValueError:
-            continue
-    return out
-
-
 def q2_appointments_attended(conn: Connection, claim_id: str) -> Q2Result:
     rows = conn.execute(
         """
@@ -215,8 +192,7 @@ def q3_reserve_changes(conn: Connection, claim_id: str) -> Q3Result:
                json_extract(attributes, '$.previous_amount')   AS previous_amount,
                json_extract(attributes, '$.delta')             AS delta,
                json_extract(attributes, '$.author')            AS author,
-               json_extract(attributes, '$.source_note_dates') AS source_note_dates,
-               json_extract(attributes, '$.evidence_quote')    AS evidence_quote
+               json_extract(attributes, '$.evidence')          AS evidence
         FROM event
         WHERE claim_id = ?
           AND event_type = 'reserve_change'
@@ -235,8 +211,7 @@ def q3_reserve_changes(conn: Connection, claim_id: str) -> Q3Result:
             author=r["author"],
             event_id=r["event_id"],
             extraction_method=r["extraction_method"],
-            source_note_dates=_parse_dates(r["source_note_dates"]),
-            evidence_quote=r["evidence_quote"],
+            evidence=_parse_evidence(r["evidence"]),
         )
         by_bucket.setdefault(r["bucket"], []).append(swing)
     summaries = [

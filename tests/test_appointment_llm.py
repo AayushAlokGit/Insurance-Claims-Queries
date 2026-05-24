@@ -232,10 +232,9 @@ def test_empty_response_yields_no_events() -> None:
     assert AppointmentExtractor(llm).extract(note) == []
 
 
-def test_appointment_date_missing_uses_note_date_for_event_date() -> None:
-    """Some narrative appointments have no explicit date. We
-    still emit an event (the LLM verified one exists); the
-    storage-layer event_date falls back to the note's own date."""
+def test_dateless_candidates_are_dropped() -> None:
+    """Dateless candidates can't land in Q2 / Q4 (both need a
+    date) and can't cluster in reconciliation. Drop at source."""
     note = _note(
         "EE attended today's session.", note_date=date(2025, 7, 4)
     )
@@ -251,8 +250,7 @@ def test_appointment_date_missing_uses_note_date_for_event_date() -> None:
             ]
         )
     )
-    [event] = AppointmentExtractor(llm).extract(note)
-    assert event.event_date == date(2025, 7, 4)
+    assert AppointmentExtractor(llm).extract(note) == []
 
 
 # --- Orchestrator wiring -----------------------------------------

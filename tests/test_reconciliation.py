@@ -393,45 +393,6 @@ def test_reconcile_scheduled_status_populates_scheduled_for_date() -> None:
     assert attrs.occurred_on is None
 
 
-def test_reconcile_skips_dateless_clusters_without_calling_llm() -> None:
-    """Dateless per-note candidates become singleton clusters with
-    no encounter date. They have no place to land in Q2 (needs
-    occurred_on) or Q4 (needs both), so the recon loop drops them
-    BEFORE the LLM call. Avoids garbage rows in the output and
-    saves the per-cluster LLM call."""
-    cands = [
-        _appt(
-            eid="dateless",
-            parties=("Vega",),
-            source_note_dates=(date(2025, 8, 9),),
-            evidence_quote="She then attended a follow-up with Dr. Vega.",
-        ),
-        _appt(
-            eid="dated",
-            occurred_on=date(2025, 6, 2),
-            parties=("Vega",),
-            source_note_dates=(date(2025, 5, 30),),
-            evidence_quote="Date of Appointment: 6-2-25",
-        ),
-    ]
-    # Only the dated cluster should trigger an LLM call.
-    llm = _FakeLLM(
-        [
-            _ClusterResolution(
-                status="attended",
-                parties=["Vega"],
-                evidence_quote="Date of Appointment: 6-2-25",
-            )
-        ]
-    )
-    out = reconcile_appointments("C", None, cands, llm)
-    assert len(out) == 1
-    assert llm.calls == 1
-    attrs = out[0].attributes
-    assert isinstance(attrs, AppointmentAttributes)
-    assert attrs.occurred_on == date(2025, 6, 2)
-
-
 def test_reconcile_skips_cluster_on_llm_failure() -> None:
     """If the LLM gives up after retries (returns no reply for a
     cluster), the cluster is silently dropped. DD-014 retry already

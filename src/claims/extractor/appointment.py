@@ -141,7 +141,7 @@ STATUS:
 
 If a note recaps multiple visits (e.g. a Resolution Strategy `SINCE LAST ACTION PLAN` or `NEXT APPOINTMENTS` section), emit one entry per visit — each entry stands on its own under the proximity rule below.
 
-DATE: explicit date → `appointment_date`. A relative phrase that resolves from the note date ("yesterday", "this morning", "last Friday") → compute it. Vague phrases ("soon", "next month", "PRN", "around <date>") → null.
+DATE: explicit date → `appointment_date`. A relative phrase that resolves from the note date ("yesterday", "this morning", "last Friday") → compute it. If you cannot pin the appointment to a specific calendar date ("soon", "next month", "PRN", "around <date>"), DO NOT emit it — undated appointments are useless downstream and will be dropped.
 
 PROXIMITY: one `evidence_quote` per event must contain ALL of (a) the appointment date (literal, relative, or a templated `Date of Appointment:` / `Next Office Visit:` header) AND (b) at least one named party OR the templated medical-record block (which implies the visit) AND (c) an action verb or status word (`attended`, `missed`, `cancelled`, `scheduled`, `visited`, `saw`, `follow-up`, or the templated header). If you cannot find ONE verbatim substring containing all three, emit nothing for that mention — do NOT reach across sentences to assemble (date, party, status) from disjoint clauses. Under-emission is recoverable downstream; over-emission with cross-attributed parties is not.
 
@@ -210,6 +210,11 @@ class AppointmentExtractor:
 
         events: list[Event] = []
         for appt in response.appointments:
+            if appt.appointment_date is None:
+                # Dateless candidates can't land in Q2 / Q4 (both need
+                # a date) and can't cluster in reconciliation (dateless
+                # events stay singletons). Drop at the source.
+                continue
             if not quote_in_body(appt.evidence_quote, note.body):
                 continue  # safety net — drop hallucinated quotes
             events.append(self._to_event(note, appt))

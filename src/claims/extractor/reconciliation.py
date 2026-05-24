@@ -233,22 +233,7 @@ def reconcile_appointments(
 
     out: list[Event] = []
     for idx, cluster in enumerate(clusters):
-        # Skip clusters with no encounter date BEFORE the LLM call:
-        # they have no place to land in Q2 / Q4 (both need
-        # occurred_on or scheduled_for_date) and would otherwise
-        # produce dateless garbage rows in the output. Saves the
-        # LLM call too.
         encounter = _encounter_date(cluster)
-        if encounter is None:
-            _log.info(
-                "recon claim=%s cluster=%d size=%d :: SKIPPED "
-                "(no encounter date)",
-                claim_id,
-                idx,
-                len(cluster),
-            )
-            continue
-
         resolution = _resolve_cluster(cluster, llm)
         if resolution is None:
             continue  # LLM gave up after retries — skip this cluster

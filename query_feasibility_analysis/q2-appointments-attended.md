@@ -11,7 +11,7 @@
 > - Status precedence is **asymmetric**: `missed`/`cancelled` beat
 >   `attended`/`scheduled`/`unknown`; ties broken by `source_note_date`
 >   recency (DD-017).
-> See `docs/resolver.md §6` and `design-decisions.md` DD-016/DD-017.
+> See `docs/resolver.md §5` and `design-decisions.md` DD-016/DD-017.
 
 ## 1. What the question is really asking
 

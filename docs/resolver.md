@@ -22,8 +22,10 @@ extraction but produces noise no single extractor can fix:
   status, and the winner is *strongest evidence*, not latest write.
 - **Derived fields** — `reserve_change.delta` needs the previous amount
   for the same bucket; only computable once events are ordered.
-- **Canonicalization** — `Dr. Caldwell` / `Dr. C` / `the neurosurgeon` are
-  the same person; the match key has to canonicalize before grouping.
+- **Identity reconciliation** — `Dr. Caldwell`, `Dr. Caldwell, MD`, the
+  clinic name, "the neurosurgeon" all surface differently across notes
+  for the same encounter; the match key has to bring them together
+  without inflating from variation alone (DD-016).
 
 These cannot live in the Extractor (one-note view) or the query layer
 (needs deterministic, reproducible merges already in SQL). The Resolver
@@ -47,17 +49,11 @@ CandidateEvent[]   ──►   Resolver   ──►   ResolvedEvent[]
  one-sided)                                provenance preserved)
 ```
 
-```ts
-CandidateEvent {
-  claim_id, event_type, event_date, attributes,
-  extraction_method: "rule" | "llm",
-  source_note_id, source_note_date
-}
-```
-
-`ResolvedEvent` has the same shape; `extraction_method = "merged"` when
-produced from >1 candidate, attribute nulls filled in from across the
-group, `source_note_ids[]` recorded for audit.
+Input and output are both the `Event` pydantic model
+(`src/claims/models/event.py`). Inputs carry
+`extraction_method ∈ {"rule", "llm"}`; resolved events produced from
+>1 input get `"merged"`, with attribute nulls filled in from across
+the group and a fresh `event_id`.
 
 ---
 
@@ -68,7 +64,7 @@ Sequential — each pass depends on the previous one having completed.
 **Pass 1 — Normalize attributes.** In-place, no grouping. Anything that
 affects the match key happens here.
 
-- *Provider canonicalization* (`appointment`) — see §5.
+- *Parties normalization* (`appointment`) — see §5 (DD-016).
 - *Bucket canonicalization* (`reserve_change`) — `Indemnity for (2) Lost
   Time` → `Indemnity (2) Lost Time` (Q3 §3).
 - *Status normalization* (`appointment`) — `no-show` / `DNA` / `didn't show`
@@ -132,29 +128,19 @@ for merged events — preserves the data for a future `--explain` flag
 The Resolver is built **per event type with a swappable matcher** — the
 core routes by event type, each strategy owns its own matching logic.
 
-```ts
-interface MatchStrategy<E extends CandidateEvent> {
-  readonly name: string;                  // e.g. "appointment.proximity-N=14"
-  matchKey(event: E): string;             // cheap bucketing
-  shouldMerge(a: E, b: E): boolean;       // finer pairwise check
-}
+Each event type has its own resolver function in
+`src/claims/resolver/` — `resolve_appointments`,
+`resolve_reserve_changes`, etc. — composed in `resolver.py::resolve`.
+A future per-event strategy registry is a refactor when matching
+accuracy demands it; for the current four types, function-per-type
+is enough.
 
-interface Resolver {
-  register<E>(eventType: string, strategy: MatchStrategy<E>): void;
-  resolve(candidates: CandidateEvent[]): ResolvedEvent[];
-}
-```
-
-MVP registers: `reserve_change` → identity; `appointment` →
-parties-set merge (DD-016: `(encounter_date exact, parties_overlap)`
-— single strategy; no separate Q2/Q4 windows);
-`return_to_work` → identity-with-form-priority; `rtw_terminal` →
-identity-with-precedence. The original plan registered two
-proximity strategies (N=7 for Q2, N=14 for Q4) — DD-016 collapsed
-both to one exact-date strategy because the windows were absorbing
-LLM mis-attributions and producing cross-date false merges.
-Per-specialty windows (Q4 §9) remain a future extension point if
-real corpora later require date drift.
+Live shapes: `reserve_change` → identity by
+`(claim_id, canonical_bucket, source_note)`; `appointment` →
+parties-set merge (DD-016: `(encounter_date exact, parties_overlap)`,
+single strategy, no Q2/Q4 split); `return_to_work` →
+identity-with-form-priority; `rtw_terminal` →
+identity-with-precedence.
 
 **Why this pattern:**
 
@@ -177,61 +163,17 @@ real corpora later require date drift.
 
 ---
 
-## 5. Provider canonicalization
+## 5. Appointment identity — DD-016 in detail
 
-> **Superseded by DD-016.** The string-canonicalization design below
-> was replaced by the LLM-emitted `parties` set + deterministic
-> normalization described in §6. Kept here for historical context —
-> the failure modes it documents (fragmenting merge keys, specialty
-> fallback collisions) are what motivated DD-016.
+Q2 and Q4 both hinge on collapsing every mention of one encounter
+into a single row. The corpus-scale failure mode is that the *same*
+person/place surfaces in many strings — `Dr. Caldwell`, `Dr.
+Caldwell, MD`, `Caldwell`, `the neurosurgeon`, `Spine & Neurology
+Group`, `Spine and Neurology` — and any merge rule has to bring
+them together without inflating from variation.
 
-The corpus-scale failure mode for Q2 and Q4. Same person appears as
-`Dr. Caldwell`, `Dr. Caldwell, MD`, `Caldwell`, `the neurosurgeon`,
-`Dr C` — without canonicalization, merge keys fragment and counts
-inflate.
-
-MVP algorithm:
-
-1. Strip degree suffixes (`, MD` / `, DO` / `, NP`) and honorifics
-   (`Dr.` / `Dr`).
-2. Extract last name (longest contiguous letter sequence; titlecase).
-3. **Specialty fallback** — if no last name (`"the spine doctor"`),
-   key on `(canonical_specialty, claim_id)`, resolving against earlier
-   candidates in the same claim. Two same-specialty providers in one
-   claim → don't merge, flag low-confidence.
-4. Emit `canonical_provider`; keep raw form in `attributes.provider_raw`
-   for audit.
-
-Deliberately **not** entity-resolution-against-a-directory. A real
-provider directory is the corpus-scale upgrade once failure modes are
-observed in practice.
-
----
-
-## 6. The fuzzy-date matching window — appointments only
-
-Why `appointment` uses `anchor_date ± window` instead of exact equality:
-
-- Visits sometimes occur a day or two off the booked-for date.
-- Resolution Strategy restatements summarize at slightly drifted dates
-  (e.g. RS `"Dr. Farano on 5/21"` vs. visit record `"Date of
-  Appointment: 5.21.25"`).
-
-| Use | Window | Rationale |
-|---|---|---|
-| Q2 cross-note dedup | **N=7 days** | Tight enough to avoid false merges of repeat visits; loose enough for drift |
-| Q4 schedule-to-visit merge | **N=14 days** | The whole point of Q4 is realistic booked-to-occurred drift |
-| Future per-specialty | configurable | PT/ortho tight (5–14d); causation IMEs and pulmonology 6–8 weeks (Q4 §9) |
-
-Only `appointment` uses windowing. `reserve_change` is exact
-date+bucket; `return_to_work` is exact `(date, duty_type)`; `rtw_terminal`
-is claim-level unique.
-
-**Superseded by DD-016.** §§5–6 above describe the pre-DD-016
-design (regex provider canonicalization + fuzzy date window).
-Both were replaced after the Phase 12 verification audit
-surfaced the structural failure mode they produced. The current
-design is:
+The live design (DD-016, replacing an earlier
+canonicalized-provider-string + `±N day` window scheme):
 
 - **Party identity**: the LLM emits a `parties: tuple[str, ...]`
   per appointment containing every named individual and
@@ -240,11 +182,15 @@ design is:
   suffixes, `&`→`and`, collapse whitespace) and compares with
   **exact set intersection**. ≥1 shared entity → same encounter.
   An empty list on either side does not block the merge (date
-  alone carries it). See `resolver/parties.py`.
+  alone carries it). See `src/claims/resolver/parties.py`.
 - **Date identity**: exact `encounter_date` equality. No `±N day`
   window. `encounter_date = scheduled_for_date or occurred_on`.
   Date-format ambiguity is the Normalizer's job (DD-013); when
   parsed dates differ, the resolver trusts them.
+
+The full rejected-alternatives discussion (regex canonicalization,
+fuzzy string matching, single `attending_party`, proximity
+windows) lives in DD-016 in `design-decisions.md`.
 
 ### Known residual failure mode — same facility, same day, two different clinicians
 
@@ -301,7 +247,7 @@ reject the first.
 
 ---
 
-## 7. Failure modes and data-quality flags
+## 6. Failure modes and data-quality flags
 
 The Resolver picks the conservative outcome and emits a flag — never
 silent coercion.
@@ -312,16 +258,14 @@ silent coercion.
 | Hanging `scheduled` event (no visit within 60 days) | Kept as `scheduled` — evidence-only promotion rule forbids silent demotion; excluded from Q4 by lack of an `occurred_on` |
 | `delta = 0` reserve change | Dropped silently — documented restatement behavior, not an error |
 | Same-minute reserve updates, different buckets (claim 1 L392+L396) | Both kept — different match keys, never group |
-| ~~Two providers, same canonical name, different specialties~~ | Obsolete — DD-016 removed string canonicalization; identity is set-overlap on `parties` |
-| ~~Canonicalized provider name not seen elsewhere in the claim~~ | Obsolete — DD-016 removed string canonicalization |
-| **Same claim, same date, two different clinicians at same facility** | **MERGED into one event (DD-016 known failure mode). Both clinicians stay in merged `parties` list — collapse is auditable. Q2 undercount = 1 for that day. See §6 above.** |
+| **Same claim, same date, two different clinicians at same facility** | **MERGED into one event (DD-016 known failure mode). Both clinicians stay in merged `parties` list — collapse is auditable. Q2 undercount = 1 for that day. See §5 above.** |
 
 Flags stored as `attributes.data_quality_flags[]`. A corpus-wide health
 report aggregating flag counts is out of MVP scope but easy to add.
 
 ---
 
-## 8. What the Resolver is NOT
+## 7. What the Resolver is NOT
 
 - **Does not classify events.** Extractor's job. `appointment` stays
   `appointment` — never re-typed.
@@ -331,7 +275,7 @@ report aggregating flag counts is out of MVP scope but easy to add.
 
 ---
 
-## 9. Testability
+## 8. Testability
 
 Pure module → exhaustive unit tests independent of the rest of the
 pipeline:

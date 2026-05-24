@@ -34,24 +34,12 @@ RawNoteBlock  ──►  Normalizer  ──►  Note
  raw bytes/text)                     data-quality flags)
 ```
 
-```ts
-RawNoteBlock {
-  // produced by Loader; minimal structuring
-  raw_header: string,        // "Date: 4-14-25 | Activity: Investigation | ..."
-  raw_body: string,          // possibly mojibake'd, possibly mixed line endings
-  source_offset: number      // for traceability back to the file
-}
-
-Note {
-  note_id: string,
-  claim_id: string,
-  note_date: string,                          // ISO-8601, parsed from header
-  activity: string,                            // "Investigation" | "Reserving" | ...
-  author: string,
-  body: string,                                // character-clean; body dates left as-is
-  data_quality_flags: string[]                 // e.g. "header_date_implausible"
-}
-```
+`RawNoteBlock` (in `src/claims/loader/`) carries the raw header line,
+raw body bytes/text, and a `source_offset` for traceability.
+`Note` (in `src/claims/models/note.py`, pydantic) carries the typed
+results: `note_id`, `claim_id`, `note_date: date` (ISO-parsed from
+the header), `activity`, `author`, `body` (character-clean; body
+dates left as-is), and `data_quality_flags: tuple[str, ...]`.
 
 **Key invariant:** the Normalizer transforms the *shape* of the note
 metadata (raw strings → typed fields) and the *encoding* of the body
@@ -151,17 +139,11 @@ multiple extractors. Surface forms it must handle:
    `data_quality_flags: ["year_inferred"]` so audits can find these.
 
 The parser's interface is intentionally narrow:
-
-```ts
-parseDate(input: string, context: { referenceDate?: string }): {
-  iso: string | null,
-  flags: string[]
-}
-```
-
-`iso` is `null` on parse failure — never a default value, never a
-guess silently encoded. Failure is a first-class outcome that
-extractors can flag and pass downstream.
+`parse_date(input: str, *, reference_date: date | None = None) -> DateParseResult`
+in `src/claims/normalizer/date_parser.py`, returning `iso: str | None`
+plus a tuple of flags. `iso` is `None` on parse failure — never a
+default value, never a guess silently encoded. Failure is a
+first-class outcome that extractors can flag and pass downstream.
 
 ---
 
@@ -176,18 +158,20 @@ Provider: ATI Physical Therapy
 ```
 
 **Output (`Note` object):**
-```ts
-{
-  note_id: "c1-n023",
-  claim_id: "1-29RT",
-  note_date: "2025-04-14",                    // header date → ISO field
-  activity: "Investigation",                   // header parsed
-  author: "Jane Adjuster",
-  body: "Received notice that outpatient PT has been scheduled—\n
-         Schedule Date Time: Apr 17 2025 9:00AM\n
-         Provider: ATI Physical Therapy",
-  data_quality_flags: []
-}
+```python
+Note(
+    note_id="c1-n023",
+    claim_id="1-29RT",
+    note_date=date(2025, 4, 14),                 # header date → typed
+    activity="Investigation",                     # header parsed
+    author="Jane Adjuster",
+    body=(
+        "Received notice that outpatient PT has been scheduled—\n"
+        "Schedule Date Time: Apr 17 2025 9:00AM\n"
+        "Provider: ATI Physical Therapy"
+    ),
+    data_quality_flags=(),
+)
 ```
 
 What changed and what didn't:
@@ -195,7 +179,7 @@ What changed and what didn't:
 - Header `Date: 4-14-25` parsed into `note_date: "2025-04-14"` — typed.
 - `â€"` repaired to `—` in the body — destructive cleanup.
 - `Apr 17 2025 9:00AM` left exactly as it was — body fidelity preserved.
-  The Marker extractor will call `parseDate("Apr 17 2025 9:00AM")` when
+  The Marker extractor will call `parse_date("Apr 17 2025 9:00AM")` when
   it processes that line and get `2025-04-17` back.
 
 ---
@@ -216,7 +200,7 @@ it parses and flags, or it surfaces a parse failure for an audit.
 | Header missing `Activity:` field | `activity: null`; downstream extractors that rely on it (`ReserveChangeExtractor` checks `activity === "Reserving"`) won't fire — correct conservative behavior |
 
 The flags propagate on the Note through to the resolved events
-(`attributes.data_quality_flags[]`) — see resolver.md §7.
+(`attributes.data_quality_flags[]`) — see resolver.md §6.
 
 ---
 
@@ -233,8 +217,9 @@ The flags propagate on the Note through to the resolved events
 - **Not a financial-data parser.** Money amounts (`$321,014.00`) are
   left exactly as-is for Q3's regex. The Normalizer never touches
   numbers.
-- **Not a provider canonicalizer.** That's the Resolver's job
-  (resolver.md §5), at a stage where cross-note context exists.
+- **Not an identity canonicalizer.** That's the Resolver's job
+  (resolver.md §5 — DD-016 parties-set merge), at a stage where
+  cross-note context exists.
 - **Not a derived-metadata enricher.** No `weeks_since_loss`, no
   inferred claim phase. Outputs are at the same semantic level as
   inputs — just cleaner.

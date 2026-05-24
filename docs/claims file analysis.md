@@ -257,8 +257,10 @@ that also covers occupational illness — date of diagnosis / last exposure.)
 
 ## Next step
 
-A separate document will cover **how to apply this inventory to answer
-questions** — starting with the four sample queries (return-to-work duration,
-appointments attended, reserve changes, time-to-provider) — including which of
-the data points above each query depends on and how reliably each can be
-extracted.
+The per-query analysis lives in
+[`query_feasibility_analysis/`](../query_feasibility_analysis/) —
+one file per sample query (Q1 RTW duration, Q2 appointments
+attended, Q3 reserve changes, Q4 schedule-to-seen lag) plus a
+README. Each file maps the data points cataloged above onto the
+facts a specific query needs and the reliability of extracting
+them.

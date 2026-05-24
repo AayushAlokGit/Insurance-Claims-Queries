@@ -33,19 +33,12 @@ Note  ──►  [ Extractor₁, Extractor₂, ... ]  ──►  CandidateEvent[
         (each extractor independently; outputs concatenated)
 ```
 
-```ts
-Note {
-  note_id, claim_id, note_date,         // ISO; normalized upstream
-  activity, author, body                // body still contains prose
-}
-
-CandidateEvent {
-  claim_id, event_type, event_date,
-  attributes,                            // type-specific JSON payload
-  extraction_method: "rule" | "llm",
-  source_note_id, source_note_date
-}
-```
+`Note` (typed metadata + cleaned body) is in
+`src/claims/models/note.py`. The extractor output is the live `Event`
+model (`src/claims/models/event.py`) with `extraction_method ∈
+{"rule", "llm"}`; the Resolver later emits `"merged"`. There is no
+separate `CandidateEvent` type — extractors return `Event` directly
+and the Resolver swaps out the merged event_id.
 
 **Key invariant:** an extractor cannot see other notes. Anything
 requiring cross-note context (status promotion, delta derivation,
@@ -85,13 +78,10 @@ the Resolver reconciles them.
 
 ## 4. The Extractor interface
 
-```ts
-interface Extractor {
-  readonly eventType: string;                       // for routing & telemetry
-  canHandle(note: Note): boolean;                   // cheap pre-filter, no LLM cost
-  extract(note: Note, ctx: ClaimContext): Promise<CandidateEvent[]>;
-}
-```
+A Python `Protocol` in `src/claims/extractor/base.py` with three
+members: `event_type: str` (for routing & telemetry),
+`can_handle(note: Note) -> bool` (cheap pre-filter, no LLM cost),
+and `extract(note: Note) -> list[Event]`.
 
 **`canHandle` is the cost gate.** Before paying LLM tokens (or even
 allocating a prompt), each extractor inspects the note for a cheap
@@ -138,9 +128,10 @@ entry: what it triggers on, what it emits, why it exists.
   misses, the LLM is responsible for catching.
 - **Triggers on:** body contains `/Date of Appointment:|Next Office
   Visit:|NOV:|Schedule Date Time:|NEXT APPOINTMENT DATE\(S\):/i`.
-- **Mechanism:** parser walks each marker line, captures provider
-  (from nearby `Provider:` or inline phrase), date (already
-  normalized).
+- **Mechanism:** parser walks each marker line, captures the
+  nearby `Provider:` / `Name of physician:` value (if any) into a
+  single-entry `parties` tuple per DD-016, captures the date (parsed
+  by the shared normalizer utility).
 - **Emits:** one or more `appointment` candidates. Crucially, a single
   note can emit **two**: a `Date of Appointment:` block (today's
   visit, `occurred_on` set) *and* a `Next Office Visit:` line
@@ -271,10 +262,13 @@ tuning that.
 Every LLM extractor follows the same contract shape, regardless of
 event type:
 
-**1. Schema-constrained output, not free text.** Anthropic SDK tool-use
-/ JSON mode. The LLM **cannot** return prose; it can only fill a
-typed structure. If the schema says `status: "attended" | "missed" |
-"cancelled"`, the model cannot invent `"probably attended"`.
+**1. Schema-constrained output, not free text.** Provider-native
+structured outputs (Google `responseSchema`, OpenAI strict
+`json_schema`), wired through `StructuredLLM` and validated as a
+pydantic model on receipt. The LLM **cannot** return prose; it can
+only fill a typed structure. If the schema says
+`status: "attended" | "missed" | "cancelled"`, the model cannot
+invent `"probably attended"`.
 
 **2. Discriminated union for the empty case.** `{rtw: null | {...}}`,
 not `{return_date: string | null}`. "No event found" is a first-class
@@ -357,7 +351,7 @@ as that one" (slow, expensive, fragile).
 
 | Failure | Detection | Behavior |
 |---|---|---|
-| LLM returns schema-invalid JSON | Tool-use / Zod parse fails | Reject candidate; log; do not retry blindly (a flaky note is a real signal) |
+| LLM returns schema-invalid JSON | pydantic validation on the response model fails | Reject candidate; log; do not retry blindly (a flaky note is a real signal) |
 | LLM hallucinates an event not in the note | `evidence_quote ⊄ note.body` substring check | Reject candidate before Resolver; emit data-quality counter |
 | LLM extracts a discussion as a real event (Q1 false positive) | Caught at eval time, not at runtime | DD-009 eval harness; iterate the prompt's rejection list |
 | Rule regex over-matches | Unit test against the gold sample notes | Tightening the regex is cheap; rule extractors have full test coverage |

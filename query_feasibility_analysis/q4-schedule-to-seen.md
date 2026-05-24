@@ -8,7 +8,7 @@
 > `(claim_id, encounter_date exact, parties_overlap ≥ 1)` — no date
 > window. Per-specialty windows remain a deferred extension point if
 > a real corpus shows the exact-date rule is too tight.
-> See `docs/resolver.md §6` and `design-decisions.md` DD-016.
+> See `docs/resolver.md §5` and `design-decisions.md` DD-016.
 
 ## 1. What the question is really asking
 

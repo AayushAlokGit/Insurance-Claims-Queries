@@ -136,9 +136,11 @@ FROM ordered
 GROUP BY claim_id, bucket;
 ```
 
-Canned function: `reserveChangeSummary(claimId): {bucket, count, net, swings[]}[]`.
-The per-change array (with date + delta) is what an adjuster actually wants
-to look at — the summary alone is too lossy.
+Canned function: `q3(claim_id) → Q3Result` (in
+`src/claims/query/queries.py`), per-bucket list of changes with
+`previous → new → delta`. The per-change array (with date + delta) is
+what an adjuster actually wants to look at — the summary alone is too
+lossy.
 
 ## 7. Reliability assessment
 

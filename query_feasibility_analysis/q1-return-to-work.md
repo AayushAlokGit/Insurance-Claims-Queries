@@ -69,21 +69,16 @@ Per DD-005, the LLM handles the *"did this happen, or is it being
 discussed?"* judgment that a rule can't generalize over phrasings it
 hasn't seen.
 
-```ts
-// LLM extractor for return_to_work
-{
-  eventType: "return_to_work",
-  prompt: "Extract a return-to-work event ONLY if the note explicitly
-           states the claimant has actually started working (full or
-           modified duty). Do NOT extract from discussion of future RTW,
-           MMI plans, releases without confirmation, or unaccepted offers.",
-  schema: {
-    event_date: "ISO date the return occurred",
-    duty_type:  "modified | full",
-    role:       "string (optional)"
-  }
-}
-```
+The `ReturnToWorkExtractor` (in `src/claims/extractor/rtw.py`) wires
+its prompt — *"Extract a return-to-work event ONLY if the note
+explicitly states the claimant has actually started working (full or
+modified duty). Do NOT extract from discussion of future RTW, MMI
+plans, releases without confirmation, or unaccepted offers."* — to a
+pydantic response schema with `event_date` (ISO),
+`duty_type ∈ {modified, full}`, and optional `role`. The strict
+schema is enforced by provider-native structured outputs; the prompt
+enumerates the rejection categories per the §6 LLM-contract
+principles in `docs/extractor.md`.
 
 The extractor emits **only positive** events. Anything that fails the
 "actually occurred" test produces no event — the negative judgment is not
@@ -140,11 +135,13 @@ FROM event WHERE event_type = 'rtw_terminal';
 The canned function returns a **discriminated union**, not a nullable
 number — so the negative cases stay distinguishable downstream:
 
-```ts
-returnToWorkDays(claimId):
-  | { status: 'returned',       days, rtwDate, dutyType }
-  | { status: 'never_returned', reason, terminalDate }
-  | { status: 'pending',        daysOpen }
+```python
+# src/claims/query/queries.py::q1
+Q1Result = (
+    Q1Returned(status="returned", days, rtw_date, duty_type)
+    | Q1NeverReturned(status="never_returned", reason, terminal_date)
+    | Q1Pending(status="pending", days_open)
+)
 ```
 
 The union forces the consumer to decide how each population is treated.

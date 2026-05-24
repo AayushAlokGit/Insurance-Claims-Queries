@@ -92,12 +92,14 @@ class AppointmentMarkerExtractor:
                     scheduled_notice_date=note.note_date,
                     scheduled_for_date=event_date,
                     status="scheduled",
+                    source_note_date=note.note_date,
                 )
             else:
                 attrs = AppointmentAttributes(
                     parties=parties,
                     occurred_on=event_date,
                     status="unknown",
+                    source_note_date=note.note_date,
                 )
 
             events.append(

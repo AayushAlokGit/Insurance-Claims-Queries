@@ -201,6 +201,7 @@ def _appt(
     status: str = "scheduled",
     eid: str = "e",
     method: str = "rule",
+    source_note_date: date | None = None,
 ) -> Event:
     anchor = occurred_on or scheduled_for_date or date(2025, 1, 1)
     return Event(
@@ -214,6 +215,7 @@ def _appt(
             scheduled_for_date=scheduled_for_date,
             scheduled_notice_date=scheduled_notice_date,
             status=status,  # type: ignore[arg-type]
+            source_note_date=source_note_date,
         ),
         extraction_method=method,  # type: ignore[arg-type]
     )
@@ -264,22 +266,140 @@ def test_status_precedence_attended_beats_scheduled() -> None:
     assert merged.attributes.status == "attended"
 
 
-def test_missed_beats_scheduled_but_not_attended() -> None:
-    a = _appt(
-        parties=("Dr. X",),
-        scheduled_for_date=date(2025, 6, 1),
-        status="missed",
-        eid="a",
-    )
-    b = _appt(
+def test_missed_beats_attended_dd017() -> None:
+    """DD-017: asymmetric precedence. When the same encounter has
+    both an `attended` (often LLM-inferred from soft signals) and
+    a `missed` (requires explicit language), `missed` wins. The
+    audited claim 2 8/11 Caldwell case is the motivating example."""
+    attended = _appt(
         parties=("Dr. X",),
         scheduled_for_date=date(2025, 6, 1),
         occurred_on=date(2025, 6, 1),
         status="attended",
-        eid="b",
+        eid="a",
+        source_note_date=date(2025, 6, 2),
     )
-    [merged] = resolve_appointments([a, b])
+    missed = _appt(
+        parties=("Dr. X",),
+        scheduled_for_date=date(2025, 6, 1),
+        status="missed",
+        eid="b",
+        source_note_date=date(2025, 6, 5),
+    )
+    [merged] = resolve_appointments([attended, missed])
     assert isinstance(merged.attributes, AppointmentAttributes)
+    assert merged.attributes.status == "missed"
+
+
+def test_missed_beats_attended_regardless_of_recency() -> None:
+    """DD-017: the asymmetry is structural, not temporal. Even if
+    the `attended` came from a later note than the `missed`, the
+    negative still wins. The extraction-cost asymmetry says: a
+    later soft-signal attended should not override an earlier
+    explicit-language missed."""
+    missed_early = _appt(
+        parties=("Dr. X",),
+        scheduled_for_date=date(2025, 6, 1),
+        status="missed",
+        eid="m",
+        source_note_date=date(2025, 6, 2),
+    )
+    attended_late = _appt(
+        parties=("Dr. X",),
+        scheduled_for_date=date(2025, 6, 1),
+        occurred_on=date(2025, 6, 1),
+        status="attended",
+        eid="a",
+        source_note_date=date(2025, 7, 1),
+    )
+    [merged] = resolve_appointments([missed_early, attended_late])
+    assert merged.attributes.status == "missed"
+
+
+def test_cancelled_beats_attended() -> None:
+    """DD-017: `cancelled` is also a negative outcome; same rule."""
+    attended = _appt(
+        parties=("Dr. X",),
+        scheduled_for_date=date(2025, 6, 1),
+        occurred_on=date(2025, 6, 1),
+        status="attended",
+        eid="a",
+    )
+    cancelled = _appt(
+        parties=("Dr. X",),
+        scheduled_for_date=date(2025, 6, 1),
+        status="cancelled",
+        eid="c",
+    )
+    [merged] = resolve_appointments([attended, cancelled])
+    assert merged.attributes.status == "cancelled"
+
+
+def test_missed_beats_cancelled() -> None:
+    """Within the negative tier, `missed` > `cancelled` — a visit
+    that should have happened and didn't is a stronger negative
+    than one that was preempted."""
+    missed = _appt(
+        parties=("Dr. X",),
+        scheduled_for_date=date(2025, 6, 1),
+        status="missed",
+        eid="m",
+    )
+    cancelled = _appt(
+        parties=("Dr. X",),
+        scheduled_for_date=date(2025, 6, 1),
+        status="cancelled",
+        eid="c",
+    )
+    [merged] = resolve_appointments([missed, cancelled])
+    assert merged.attributes.status == "missed"
+
+
+def test_positive_tier_recency_tiebreaks_unknown_vs_scheduled() -> None:
+    """When all events are in the positive tier and share the
+    highest rank, the most recent `source_note_date` wins. Here
+    both candidates are `scheduled` — the recency tiebreaker
+    keeps things stable in reschedule chains."""
+    early = _appt(
+        parties=("Dr. X",),
+        scheduled_for_date=date(2025, 6, 1),
+        scheduled_notice_date=date(2025, 5, 1),
+        status="scheduled",
+        eid="early",
+        source_note_date=date(2025, 5, 1),
+    )
+    later = _appt(
+        parties=("Dr. X",),
+        scheduled_for_date=date(2025, 6, 1),
+        scheduled_notice_date=date(2025, 5, 20),
+        status="scheduled",
+        eid="late",
+        source_note_date=date(2025, 5, 20),
+    )
+    [merged] = resolve_appointments([early, later])
+    assert merged.attributes.status == "scheduled"
+    # Merged event keeps the LATEST source_note_date for downstream
+    # re-merge stability.
+    assert merged.attributes.source_note_date == date(2025, 5, 20)
+
+
+def test_scheduled_upgrades_to_attended_without_negative() -> None:
+    """Sanity check: the positive-tier monotonic-up behavior is
+    preserved. Scheduled + attended (no negative anywhere) → attended."""
+    scheduled = _appt(
+        parties=("Dr. X",),
+        scheduled_for_date=date(2025, 6, 1),
+        status="scheduled",
+        eid="s",
+    )
+    attended = _appt(
+        parties=("Dr. X",),
+        scheduled_for_date=date(2025, 6, 1),
+        occurred_on=date(2025, 6, 1),
+        status="attended",
+        eid="a",
+    )
+    [merged] = resolve_appointments([scheduled, attended])
     assert merged.attributes.status == "attended"
 
 

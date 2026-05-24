@@ -44,8 +44,18 @@ evidence only. Search for "DD-016 same-facility-same-day failure
 mode" if you arrive at this comment because a real-world
 encounter just collapsed.
 
-Status precedence (resolver.md §3, Pass 3):
-    attended > missed > cancelled > scheduled > unknown
+Status precedence (DD-017, asymmetric):
+    - Any `missed` or `cancelled` in the merge group → that wins,
+      regardless of any `attended` / `scheduled` / `unknown` present.
+      (Within negatives: missed > cancelled.)
+    - Otherwise (all positives) → attended > scheduled > unknown.
+    - Ties at the same effective tier are broken by the more
+      recent `source_note_date`.
+
+This replaces the previous monotonic-up rank, which silently
+upgraded `missed` → `attended` whenever both existed for the same
+encounter — see DD-017 for the audited failure case and the
+extraction-cost asymmetry that justifies the new shape.
 """
 
 from __future__ import annotations
@@ -56,13 +66,17 @@ from datetime import date
 from claims.models import AppointmentAttributes, AppointmentStatus, Event
 from claims.resolver.parties import normalize_party, parties_overlap
 
-_STATUS_RANK: dict[AppointmentStatus, int] = {
-    "attended": 4,
-    "missed": 3,
-    "cancelled": 2,
+# DD-017: two-tier status ranking, asymmetric.
+_POSITIVE_RANK: dict[AppointmentStatus, int] = {
+    "attended": 2,
     "scheduled": 1,
     "unknown": 0,
 }
+_NEGATIVE_RANK: dict[AppointmentStatus, int] = {
+    "missed": 2,
+    "cancelled": 1,
+}
+_NEGATIVE_STATUSES = frozenset(_NEGATIVE_RANK)
 
 
 def _encounter_date(attrs: AppointmentAttributes) -> date | None:
@@ -89,10 +103,46 @@ def _should_merge(a: Event, b: Event) -> bool:
     return parties_overlap(a_attrs.parties, b_attrs.parties)
 
 
-def _stronger_status(
-    a: AppointmentStatus, b: AppointmentStatus
-) -> AppointmentStatus:
-    return a if _STATUS_RANK[a] >= _STATUS_RANK[b] else b
+_DATE_MIN = date.min  # tiebreaker default for events with no source_note_date
+
+
+def _note_date(ev: Event) -> date:
+    attrs = ev.attributes
+    assert isinstance(attrs, AppointmentAttributes)
+    return attrs.source_note_date or _DATE_MIN
+
+
+def _resolve_status(events: list[Event]) -> AppointmentStatus:
+    """DD-017 status resolver. Negatives beat positives; within a
+    tier, max rank wins with `source_note_date` as the tiebreaker.
+
+    `events` is the full merge group — `_should_merge` already
+    confirmed they describe the same encounter."""
+    negatives = [
+        e
+        for e in events
+        if e.attributes.status in _NEGATIVE_STATUSES  # type: ignore[union-attr]
+    ]
+    if negatives:
+        # Any negative beats any positive. Among negatives: max
+        # rank (missed > cancelled), recency as tiebreaker.
+        chosen = max(
+            negatives,
+            key=lambda e: (
+                _NEGATIVE_RANK[e.attributes.status],  # type: ignore[index]
+                _note_date(e),
+            ),
+        )
+        return chosen.attributes.status  # type: ignore[return-value]
+    # No negatives — fall back to positive rank with recency tiebreak.
+    chosen = max(
+        events,
+        key=lambda e: (
+            _POSITIVE_RANK.get(e.attributes.status, 0),  # type: ignore[arg-type]
+            _note_date(e),
+        ),
+    )
+    return chosen.attributes.status  # type: ignore[return-value]
 
 
 def _merge_parties(events: list[Event]) -> tuple[str, ...]:
@@ -122,25 +172,24 @@ def _merge_parties(events: list[Event]) -> tuple[str, ...]:
 
 def _merge(events: list[Event]) -> Event:
     """Combine events that all describe the same appointment.
-    Status takes the strongest; date fields union (first non-null);
-    parties union (longest surface form per normalized identity);
-    scheduled_notice_date takes the latest (reschedule semantics —
-    resolver.md §5)."""
+    Status follows DD-017 (asymmetric + recency); date fields
+    union (first non-null); parties union (longest surface form
+    per normalized identity); scheduled_notice_date takes the
+    latest (reschedule semantics — resolver.md §5)."""
     first = events[0]
     base_attrs = first.attributes
     assert isinstance(base_attrs, AppointmentAttributes)
 
-    status: AppointmentStatus = base_attrs.status
     occurred_on = base_attrs.occurred_on
     scheduled_for_date = base_attrs.scheduled_for_date
     scheduled_notice_date = base_attrs.scheduled_notice_date
     specialty = base_attrs.specialty
     appointment_type = base_attrs.appointment_type
+    latest_note_date = base_attrs.source_note_date
 
     for ev in events[1:]:
         attrs = ev.attributes
         assert isinstance(attrs, AppointmentAttributes)
-        status = _stronger_status(status, attrs.status)
         occurred_on = occurred_on or attrs.occurred_on
         scheduled_for_date = (
             scheduled_for_date or attrs.scheduled_for_date
@@ -152,6 +201,15 @@ def _merge(events: list[Event]) -> Event:
             scheduled_notice_date = attrs.scheduled_notice_date
         specialty = specialty or attrs.specialty
         appointment_type = appointment_type or attrs.appointment_type
+        # DD-017: preserve the latest note_date through merges so
+        # subsequent re-merges see recency-correct tiebreak data.
+        if attrs.source_note_date is not None and (
+            latest_note_date is None
+            or attrs.source_note_date > latest_note_date
+        ):
+            latest_note_date = attrs.source_note_date
+
+    status = _resolve_status(events)
 
     merged_attrs = AppointmentAttributes(
         parties=_merge_parties(events),
@@ -161,6 +219,7 @@ def _merge(events: list[Event]) -> Event:
         occurred_on=occurred_on,
         status=status,
         appointment_type=appointment_type,
+        source_note_date=latest_note_date,
     )
     event_date = (
         merged_attrs.occurred_on

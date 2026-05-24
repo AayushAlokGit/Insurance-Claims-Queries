@@ -62,7 +62,12 @@ class AppointmentAttributes(_AttributesBase):
     DD-016: the LLM emits the set of named individuals and
     organizations involved in this encounter; the resolver merges
     by claim + encounter_date + party-set overlap. Empty list
-    means no identifiable party (the merge falls to date alone)."""
+    means no identifiable party (the merge falls to date alone).
+    `source_note_date` per DD-017: when this event was extracted
+    from a single note, the note's own date; used by the resolver
+    as a recency tiebreaker when multiple events for the same
+    encounter share a status tier. After merge it holds the latest
+    of the merged group."""
 
     type: Literal["appointment"] = "appointment"
     parties: tuple[str, ...] = ()
@@ -72,6 +77,7 @@ class AppointmentAttributes(_AttributesBase):
     occurred_on: date | None = None
     status: AppointmentStatus
     appointment_type: AppointmentType | None = None
+    source_note_date: date | None = None
 
     @property
     def encounter_date(self) -> date | None:

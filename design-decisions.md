@@ -27,6 +27,7 @@ was rejected** — so the reasoning is traceable, not just the outcome.
 | DD-014 | LLM extractors retry transient failures up to 3 attempts with backoff, then drop+warn | Accepted | 2026-05-23 |
 | DD-015 | Per-note extraction is parallelized across notes (default 4 workers, threads, --workers configurable) | Accepted | 2026-05-23 |
 | DD-016 | Appointment identity is `(claim_id, encounter_date, party-overlap)`; LLM emits a `parties` list, no string fuzzy matching | Accepted | 2026-05-23 |
+| DD-017 | Appointment status precedence is asymmetric: `missed`/`cancelled` beat `attended`; recency tiebreaker at the same tier | Accepted | 2026-05-23 |
 
 ---
 
@@ -742,6 +743,147 @@ failure mode is *bounded* (must be same claim, same date, same
 practice) and *inspectable* (the merged event's `parties` lists
 both clinicians, so an auditor sees the collapse). Bounded-and-
 visible is acceptable; unbounded-and-silent is not.
+
+## DD-017 — Appointment status precedence is asymmetric; recency breaks ties
+**Status:** Accepted · **Date:** 2026-05-23
+
+**Context.** The Phase 12 verification audit surfaced a class of
+Q2 false positives: the resolver was reporting attended visits
+that the claimant actually missed. Concrete example in claim 2:
+
+- 7/29 note schedules `"8/11/25 1:00pm with Dr. Caldwell"` →
+  `scheduled` event for 8/11.
+- A later extraction emits `attended` for 8/11 with Dr. Caldwell
+  (likely from a recap that worded the historical reference in a
+  way the LLM read as past-tense visit).
+- 8/14 note: `"awaiting the 8/13 OV notes ... missed OV w/ Dr.
+  Caldwell"` — explicit miss.
+- 8/18 note: `"she was unable to attend her appointments
+  scheduled for 08/11 and 08/13"` — explicit miss.
+
+When `attended` and `missed` events for the same encounter both
+reach the resolver, `_stronger_status` picked `attended` because
+the previous rank was a monotonic-upward order:
+
+    attended (4) > missed (3) > cancelled (2) > scheduled (1) > unknown (0)
+
+That rank conflates two different signals — *confidence on a
+scale* and *outcome class*. It is correct for the "upgrade from
+low-information" cases (`unknown` → `scheduled` → `attended`)
+where each step refines an earlier state with new evidence. It is
+wrong when two notes *disagree* about the outcome.
+
+**Decision.** Replace the linear rank with an asymmetric two-tier
+rule:
+
+1. **Negatives beat positives.** When at least one event in a
+   merge group has status `missed` or `cancelled`, *that* status
+   wins regardless of any `attended` / `scheduled` / `unknown`
+   events in the same group. Within the negative tier:
+   `missed > cancelled`.
+2. **Within a single tier (all positives, or all negatives), the
+   monotonic rank still applies.** `attended > scheduled >
+   unknown` for positives.
+3. **Recency breaks ties.** When two events have the same
+   effective status, the one with the more recent `source_note_date`
+   wins for any non-status attribute populated by `_merge`.
+
+This requires propagating `note.note_date` into each event so the
+resolver can compare. Added as `AppointmentAttributes.source_note_date:
+date | None = None` (DD-007 makes this additive).
+
+**Why asymmetric is the right shape.**
+
+The asymmetry rests on extraction-cost asymmetry — how hard each
+status is for the LLM to emit by accident:
+
+| Status | How it gets emitted | False-positive risk |
+|---|---|---|
+| `attended` | Soft signals: clinical visit summary, narrative recap, "EE attended ...", "saw Dr. X on ...". The prompt instructs the LLM to infer attended even from administrative paragraphs that contain a date + diagnosis content. | **High.** Easy to over-infer. |
+| `missed` / `cancelled` | Explicit language only: "missed", "no-show", "DNA", "unable to attend", "cancelled", "rescheduled before it could happen". | **Low.** The LLM has to find direct disconfirmation. |
+
+When the two collide, trust the harder-to-produce signal:
+
+- If the model wrongly emits `attended`, the asymmetric rule
+  correctly demotes when a `missed` exists. This is the audited
+  failing case.
+- If the model wrongly emits `missed` (much rarer), the
+  asymmetric rule incorrectly demotes a true `attended`. Cost
+  bounded by how often `missed` false-positives occur (audit
+  found zero in the two samples).
+
+The cost trade strictly favors the audited failure mode over the
+hypothetical one.
+
+**Why recency as tiebreaker, not as primary rule.**
+
+"Latest note always wins" was the alternative — strict temporal
+precedence. Rejected because:
+
+- The note's `note_date` is when the note was *written*, not when
+  the appointment happened. A summary note written months after
+  the fact has an older effective signal than an appointment-day
+  observation.
+- A single stray late note (e.g., a Resolution Strategy recap
+  that misremembers an outcome) would unconditionally override
+  every prior careful extraction.
+- The asymmetric structure captures the *kind* of evidence
+  (positive vs. negative); recency only matters as a tiebreaker
+  among same-kind events.
+
+Recency does the right thing at the tier-tie level: two `scheduled`
+events for the same encounter (a booking + a reschedule
+confirmation) keep the most recent; two `missed` events for the
+same encounter (multiple confirmations) keep the most recent.
+
+**Rejected.**
+
+- *Monotonic-up rank (the previous Phase 9 design)* — what the
+  audit caught failing. `attended` always beats `missed` even
+  when `missed` came from a later, explicit note.
+- *Latest-note-wins, full stop* — see above. Conflates note
+  recency with evidence quality.
+- *Note-relative-to-encounter rule (testimony vs. prediction)* —
+  more principled, more complex. Would require categorizing
+  every event as "before the encounter date" (prediction) vs.
+  "after" (testimony) and only allowing testimony to override
+  testimony. Asymmetric + recency gets us 95% of the value with
+  one new field and a 15-line function. Reserved as a future
+  refinement if asymmetric proves insufficient.
+- *Require a `correction` event type for explicit retraction* —
+  cleanest model long-term but pushes complexity into the LLM
+  prompt and a new event taxonomy entry. Not justified by the
+  current corpus.
+
+**Consequences.**
+
+- `_stronger_status` (pairwise comparator) becomes `_resolve_status`
+  (group resolver) in `appointments.py`. The rank dict splits into
+  `_POSITIVE_RANK` and `_NEGATIVE_RANK`.
+- `AppointmentAttributes.source_note_date: date | None = None`
+  added. Populated by both `AppointmentExtractor` and
+  `AppointmentMarkerExtractor` from `note.note_date`. Not surfaced
+  by Q2 / Q4 output — internal to the resolver.
+- After a merge, the merged event's `source_note_date` is set to
+  the latest among the merged group so subsequent re-merges
+  (re-ingestion of the same claim with overlapping notes) maintain
+  recency-correct behavior.
+
+**Known limitations.**
+
+- An LLM-emitted false `missed` will incorrectly demote a real
+  `attended`. Mitigation: prompt requires explicit negative
+  language for `missed`; corpus audit confirms zero false `missed`
+  extractions across the two samples. If observed in a larger
+  corpus, the upgrade path is the "testimony vs prediction" rule
+  noted above (requires the negative to come from a note dated
+  >= the encounter date, blocking pre-appointment "missed"
+  emissions).
+- The rule does not cover the case where the LLM fails to emit a
+  `missed` event at all (silently dropping the negative). That's
+  a prompt-coverage issue, separate from this decision. Verified
+  separately: the 8/14 and 8/18 notes in claim 2 must produce
+  `missed` extractions for the asymmetric rule to fire at all.
 
 <!-- Append new decisions below this line. Template:
 

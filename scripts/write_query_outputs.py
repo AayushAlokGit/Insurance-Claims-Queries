@@ -71,13 +71,23 @@ def main() -> int:
             "sample_claim_notes/query_outputs/<claim_id>.json."
         ),
     )
+    p.add_argument(
+        "--stdout",
+        action="store_true",
+        help="Write to stdout instead of a file (used by the eval harness).",
+    )
     args = p.parse_args()
+
+    rendered = _render(args.claim_id, args.db)
+    if args.stdout:
+        sys.stdout.write(rendered)
+        return 0
 
     out_path = (
         Path(args.out) if args.out else _DEFAULT_OUT_DIR / f"{args.claim_id}.json"
     )
     out_path.parent.mkdir(parents=True, exist_ok=True)
-    out_path.write_text(_render(args.claim_id, args.db), encoding="utf-8")
+    out_path.write_text(rendered, encoding="utf-8")
     print(f"wrote {out_path}")
     return 0
 

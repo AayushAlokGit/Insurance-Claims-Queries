@@ -198,7 +198,9 @@ Source: `Activity: Reserving` note containing the line
   "previous_amount": 280000.00,
   "new_amount": 321014.00,
   "delta": 41014.00,
-  "author": "M.H."
+  "author": "M.H.",
+  "source_note_date": "2025-09-15",
+  "evidence_quote": "Indemnity for (2) Lost Time Changed to $321,014.00"
 }
 ```
 
@@ -209,6 +211,9 @@ Source: `Activity: Reserving` note containing the line
   not silent merge.
 - `previous_amount` and `delta` are computed by the Resolver after events
   are ordered by `event_date`, not extracted directly.
+- `source_note_date` + `evidence_quote` are the debugging pair: which
+  note this row came from, and the verbatim text inside it that
+  justified the extraction.
 - `extraction_method` should always be `"rule"`; any `"llm"` here is a bug.
 
 ### 4.2 `appointment` — Q2 & Q4, hybrid
@@ -266,7 +271,9 @@ coordinator."*
 ```json
 {
   "duty_type": "modified",
-  "role": "scheduling coordinator"
+  "role": "scheduling coordinator",
+  "source_note_date": "2025-11-12",
+  "evidence_quote": "EE returned to modified duty on 11/10/25 as a scheduling coordinator"
 }
 ```
 
@@ -275,6 +282,10 @@ coordinator."*
 - A claim can have multiple `return_to_work` events (recurrence,
   post-surgical period, modified → full). **Q1 uses the first**;
   subsequent ones power future recurrence-duration queries.
+- `source_note_date` + `evidence_quote` are the debugging pair: when
+  the note was written and the substring inside it that justified the
+  extraction. On merge across notes, `source_note_date` is the latest
+  of the merged group.
 - Injury-claim vs. illness-claim semantic differences (recovery vs.
   permanent accommodation vs. moved-away-from-exposure) are tracked at
   the **claim level** via `Claim.claim_type`. If a finer event-level
@@ -289,7 +300,9 @@ recorded. PPD 35% awarded."*
 ```json
 {
   "reason": "closed_no_rtw",
-  "context": "lump-sum settlement; PPD 35% awarded"
+  "context": "lump-sum settlement; PPD 35% awarded",
+  "source_note_date": "2026-04-12",
+  "evidence_quote": "Claim closed via lump-sum settlement on 4/12/26; no RTW recorded"
 }
 ```
 
@@ -298,6 +311,9 @@ recorded. PPD 35% awarded."*
 - At most one per claim. Mutually exclusive with `return_to_work` for
   most consumers — Q1's canned function checks for either, returning a
   discriminated union (`returned | never_returned | pending`).
+- `source_note_date` + `evidence_quote` are the debugging pair: the
+  date of the note that declared the terminal state and the verbatim
+  text justifying it.
 - Modeled as an event, not a Claim column, so every future query
   (*"PTD rate by jurisdiction,"* *"average time-to-settlement for
   non-returners"*) reads it as a normal aggregation.

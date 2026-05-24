@@ -46,7 +46,9 @@ class _AttributesBase(BaseModel):
 
 class ReserveChangeAttributes(_AttributesBase):
     """Q3 payload. previous_amount and delta are derived by the
-    Resolver after events are ordered (data-modeling.md §4.1)."""
+    Resolver after events are ordered (data-modeling.md §4.1).
+    `source_note_date` is the date of the note this event was
+    extracted from — paired with `evidence_quote` for debugging."""
 
     type: Literal["reserve_change"] = "reserve_change"
     bucket: str
@@ -54,6 +56,7 @@ class ReserveChangeAttributes(_AttributesBase):
     previous_amount: Decimal | None = None
     delta: Decimal | None = None
     author: str | None = None
+    source_note_date: date | None = None
     evidence_quote: str | None = None
 
 
@@ -91,20 +94,26 @@ class AppointmentAttributes(_AttributesBase):
 
 
 class ReturnToWorkAttributes(_AttributesBase):
-    """Q1 positive case (data-modeling.md §4.3)."""
+    """Q1 positive case (data-modeling.md §4.3). `source_note_date`
+    is the date of the note this event was extracted from — paired
+    with `evidence_quote` for debugging."""
 
     type: Literal["return_to_work"] = "return_to_work"
     duty_type: RTWDutyType
     role: str | None = None
+    source_note_date: date | None = None
     evidence_quote: str | None = None
 
 
 class RTWTerminalAttributes(_AttributesBase):
-    """Q1 definitive negative — DD-011 (data-modeling.md §4.4)."""
+    """Q1 definitive negative — DD-011 (data-modeling.md §4.4).
+    `source_note_date` is the date of the note this event was
+    extracted from — paired with `evidence_quote` for debugging."""
 
     type: Literal["rtw_terminal"] = "rtw_terminal"
     reason: RTWTerminalReason
     context: str | None = None
+    source_note_date: date | None = None
     evidence_quote: str | None = None
 
 

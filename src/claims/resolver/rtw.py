@@ -20,16 +20,27 @@ def _merge(events: list[Event]) -> Event:
     base = first.attributes
     assert isinstance(base, ReturnToWorkAttributes)
     role = base.role
+    latest_note_date = base.source_note_date
     for ev in events[1:]:
         attrs = ev.attributes
         assert isinstance(attrs, ReturnToWorkAttributes)
         if attrs.role and (role is None or len(attrs.role) > len(role)):
             role = attrs.role
+        if attrs.source_note_date is not None and (
+            latest_note_date is None
+            or attrs.source_note_date > latest_note_date
+        ):
+            latest_note_date = attrs.source_note_date
     if len(events) == 1:
         return first
     return first.model_copy(
         update={
-            "attributes": base.model_copy(update={"role": role}),
+            "attributes": base.model_copy(
+                update={
+                    "role": role,
+                    "source_note_date": latest_note_date,
+                }
+            ),
             "extraction_method": "merged",
         }
     )

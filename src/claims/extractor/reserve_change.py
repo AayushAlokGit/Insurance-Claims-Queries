@@ -47,6 +47,7 @@ class ReserveChangeExtractor:
                         bucket=bucket,
                         new_amount=new_amount,
                         author=note.author,
+                        source_note_date=note.note_date,
                         evidence_quote=m.group(0).strip(),
                     ),
                     extraction_method="rule",

@@ -44,6 +44,27 @@ These are non-obvious from any one file; together they prevent re-litigating dec
 
 ---
 
+## Where artifacts land on disk
+
+Use these when grepping for traces of a run or comparing outputs across runs. Paths are relative to repo root.
+
+| Artifact | Location | Notes |
+|---|---|---|
+| Ingestion run logs | `./logs/claims_ingest/<ts>-<file>-<provider>-w<workers>.log` | File handler is always DEBUG; console is INFO (or DEBUG with `--verbose`). One file per ingest invocation. |
+| Per-query run logs | `./logs/claims_query/<ts>-<claim_id>-q<N>.log` | One file per `(claim, query)` pair. |
+| Ad-hoc script logs | `./logs/<script_name>/...` | E.g. `logs/try_appointment_llm/`. Convention: never flat under `logs/`. |
+| Sample claim notes (input) | `./sample_claim_notes/sample_claim_notes{1,2}.md` | The two sample inputs from `Exercise.md`. |
+| Ingested DB | `./sample_claim_notes/query_outputs/sample.db` | SQLite; rebuilt by the ingest script. |
+| Per-claim query output (JSON) | `./sample_claim_notes/query_outputs/<claim_id>.json` | One file per claim, containing all four queries. Sections are delimited by `=== q1 ===` etc. |
+
+**Greppable log lines added for debugging Q2 / Q4 issues:**
+- Extractor stage: `extract note=<id> note_date=<d> by=<Extractor> :: appointment date=<d> kind=<scheduled|occurred> status=<s> parties=[...] evidence="..."` — one INFO line per emitted event.
+- Resolver stage: `merge cluster_size=N chosen_status=<s> members=[...] input_statuses=[...]` — one INFO line per merge group of size >1.
+- Resolver near-miss: `no-merge reason=date-mismatch-but-parties-overlap a=(...) b=(...)` — INFO. Catches the note-write-date vs DOS off-by-N pattern that lets the same encounter slip into two clusters.
+- Other no-merge reasons emit at DEBUG.
+
+---
+
 ## The four canned queries
 
 | ID | Question | Extraction | Doc |

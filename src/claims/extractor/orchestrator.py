@@ -23,9 +23,31 @@ from claims.extractor.reserve_change import ReserveChangeExtractor
 from claims.extractor.rtw import ReturnToWorkExtractor
 from claims.extractor.rtw_terminal import RtwTerminalExtractor
 from claims.llm import StructuredLLM
-from claims.models import Event, Note
+from claims.models import AppointmentAttributes, Event, Note
 
 _log = logging.getLogger(__name__)
+
+
+def _summarize(ev: Event) -> str:
+    """One-line audit summary of an emitted event. Designed to be
+    greppable by date / party when diagnosing why a given
+    appointment lands with the wrong status or never appears."""
+    attrs = ev.attributes
+    if isinstance(attrs, AppointmentAttributes):
+        enc = attrs.scheduled_for_date or attrs.occurred_on or ev.event_date
+        kind = (
+            "occurred" if attrs.occurred_on
+            else "scheduled" if attrs.scheduled_for_date
+            else "?"
+        )
+        parties = "|".join(attrs.parties) or "-"
+        quote = (attrs.evidence_quote or "").replace("\n", " ")[:80]
+        return (
+            f"appointment date={enc} kind={kind} status={attrs.status} "
+            f"parties=[{parties}] evidence=\"{quote}\""
+        )
+    quote = (getattr(attrs, "evidence_quote", "") or "").replace("\n", " ")[:80]
+    return f"{ev.event_type} date={ev.event_date} evidence=\"{quote}\""
 
 
 def default_rule_extractors() -> list[Extractor]:
@@ -60,5 +82,13 @@ def run_all(
                 len(produced),
                 note.note_id,
             )
+            for ev in produced:
+                _log.info(
+                    "extract note=%s note_date=%s by=%s :: %s",
+                    note.note_id,
+                    note.note_date,
+                    type(ext).__name__,
+                    _summarize(ev),
+                )
         events.extend(produced)
     return events

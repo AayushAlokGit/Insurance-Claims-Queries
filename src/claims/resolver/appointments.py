@@ -60,11 +60,23 @@ extraction-cost asymmetry that justifies the new shape.
 
 from __future__ import annotations
 
+import logging
 import uuid
 from datetime import date
 
 from claims.models import AppointmentAttributes, AppointmentStatus, Event
 from claims.resolver.parties import normalize_party, parties_overlap
+
+_log = logging.getLogger(__name__)
+
+
+def _ev_short(ev: Event) -> str:
+    """Compact one-line identity for an event in resolver logs."""
+    attrs = ev.attributes
+    assert isinstance(attrs, AppointmentAttributes)
+    enc = attrs.scheduled_for_date or attrs.occurred_on or ev.event_date
+    parties = "|".join(attrs.parties) or "-"
+    return f"{ev.event_id[:8]} date={enc} status={attrs.status} parties=[{parties}]"
 
 # DD-017: two-tier status ranking, asymmetric.
 _POSITIVE_RANK: dict[AppointmentStatus, int] = {
@@ -97,10 +109,35 @@ def _should_merge(a: Event, b: Event) -> bool:
         # No date on at least one side — can't anchor the merge.
         # Fall back to party overlap only (rare; mostly the LLM
         # extractor emitting an undated past visit).
-        return parties_overlap(a_attrs.parties, b_attrs.parties)
+        overlap = parties_overlap(a_attrs.parties, b_attrs.parties)
+        if not overlap:
+            _log.debug(
+                "no-merge reason=undated-no-party-overlap a=(%s) b=(%s)",
+                _ev_short(a),
+                _ev_short(b),
+            )
+        return overlap
     if a_date != b_date:
+        if parties_overlap(a_attrs.parties, b_attrs.parties):
+            # High-signal case: same parties, different dates. Often a
+            # note-write-date vs DOS off-by-one (e.g. 4/22 Caldwell vs
+            # 4/23 OHC, 6/26 Harmon vs 6/27 Harmon). Logged so we can
+            # see it without flipping to DEBUG.
+            _log.info(
+                "no-merge reason=date-mismatch-but-parties-overlap "
+                "a=(%s) b=(%s)",
+                _ev_short(a),
+                _ev_short(b),
+            )
         return False
-    return parties_overlap(a_attrs.parties, b_attrs.parties)
+    overlap = parties_overlap(a_attrs.parties, b_attrs.parties)
+    if not overlap:
+        _log.debug(
+            "no-merge reason=same-date-no-party-overlap a=(%s) b=(%s)",
+            _ev_short(a),
+            _ev_short(b),
+        )
+    return overlap
 
 
 _DATE_MIN = date.min  # tiebreaker default for events with no source dates
@@ -282,5 +319,26 @@ def resolve_appointments(events: list[Event]) -> list[Event]:
             if not placed:
                 clusters.append([ev])
         for cluster in clusters:
-            out.append(_merge(cluster))
+            merged = _merge(cluster)
+            if len(cluster) > 1:
+                merged_attrs = merged.attributes
+                assert isinstance(merged_attrs, AppointmentAttributes)
+                statuses = [
+                    e.attributes.status  # type: ignore[union-attr]
+                    for e in cluster
+                ]
+                _log.info(
+                    "merge cluster_size=%d chosen_status=%s members=[%s] "
+                    "input_statuses=%s",
+                    len(cluster),
+                    merged_attrs.status,
+                    "; ".join(_ev_short(e) for e in cluster),
+                    statuses,
+                )
+            else:
+                _log.debug(
+                    "singleton kept (%s)",
+                    _ev_short(cluster[0]),
+                )
+            out.append(merged)
     return out

@@ -105,7 +105,7 @@ sample_claim_notes/X.md
         │
         ▼
    Resolver            dedup + status promotion + delta derivation
-        │              (provider canonicalization, proximity merge)
+        │              (parties-set merge on exact encounter_date; DD-016)
         │
         ▼
    SQLite (claims.db)  Claim + Event with JSON1 attributes
@@ -127,7 +127,7 @@ this order (also tracked in `CLAUDE.md`):
 
 1. [`docs/Exercise.md`](docs/Exercise.md) — the brief.
 2. [`docs/DESIGN.md`](docs/DESIGN.md) — master design.
-3. [`design-decisions.md`](design-decisions.md) — DD-001 … DD-015.
+3. [`design-decisions.md`](design-decisions.md) — DD-001 … DD-017.
 4. [`docs/data-modeling.md`](docs/data-modeling.md) — `Claim` + `Event` schema.
 5. [`docs/normalizer.md`](docs/normalizer.md) — Normalizer deep dive.
 6. [`docs/extractor.md`](docs/extractor.md) — Extractor deep dive (LLM contract + prompts).
@@ -145,6 +145,8 @@ A few load-bearing decisions worth highlighting:
 - **DD-013**: Normalizer preserves body text verbatim — the LLM's `evidence_quote` substring check depends on it.
 - **DD-014**: bounded retry with ±50% jitter on LLM calls.
 - **DD-015**: per-note extraction parallelized (default 4 workers; honors RPM ceiling on Gemini free tier).
+- **DD-016**: appointment merge key is `(claim_id, encounter_date exact, parties_overlap ≥ 1)`; LLM emits a `parties` list, resolver compares with deterministic normalization. No fuzzy matching, no proximity window.
+- **DD-017**: asymmetric appointment status precedence — `missed`/`cancelled` beat `attended`; recency breaks ties.
 
 ---
 

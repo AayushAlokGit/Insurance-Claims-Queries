@@ -1,0 +1,234 @@
+{
+  "claim_id": "2-248KR",
+  "method": "single whole-claim LLM call",
+  "count": 14,
+  "appointments": [
+    {
+      "status": "attended",
+      "occurred_on": "2025-01-06",
+      "scheduled_for_date": null,
+      "scheduled_notice_date": "2025-01-02",
+      "parties": [
+        "Occupational Health Clinic"
+      ],
+      "source_note_dates": [
+        "2025-01-02",
+        "2025-01-06"
+      ],
+      "evidence_quote": "Advised she appears to be treating at Occupational Health Clinic with a fwp on 1/6."
+    },
+    {
+      "status": "attended",
+      "occurred_on": "2025-01-10",
+      "scheduled_for_date": null,
+      "scheduled_notice_date": "2025-01-08",
+      "parties": [
+        "Physical Therapy"
+      ],
+      "source_note_dates": [
+        "2025-01-08"
+      ],
+      "evidence_quote": "Schedule Date Time: Jan 10 2025 9:00AM Service Requested: Physical Therapy"
+    },
+    {
+      "status": "attended",
+      "occurred_on": "2025-01-20",
+      "scheduled_for_date": null,
+      "scheduled_notice_date": "2025-01-02",
+      "parties": [
+        "Occupational Health Clinic"
+      ],
+      "source_note_dates": [
+        "2025-01-02",
+        "2025-01-21",
+        "2025-01-21"
+      ],
+      "evidence_quote": "Yes I went yesterday and she still wants me in therapy for 4 more weeks and then to come back \u2014 she checked my back and still felt the muscle spasm so she wants me to keep going."
+    },
+    {
+      "status": "attended",
+      "occurred_on": "2025-02-22",
+      "scheduled_for_date": null,
+      "scheduled_notice_date": "2025-01-02",
+      "parties": [
+        "Occupational Health Clinic"
+      ],
+      "source_note_dates": [
+        "2025-01-02",
+        "2025-02-25",
+        "2025-02-25"
+      ],
+      "evidence_quote": "Clmt forwarded copy of Occupational Health Clinic Work Status Report from her OV on 2/22."
+    },
+    {
+      "status": "attended",
+      "occurred_on": "2025-03-08",
+      "scheduled_for_date": null,
+      "scheduled_notice_date": "2025-02-25",
+      "parties": [
+        "Occupational Health Clinic"
+      ],
+      "source_note_dates": [
+        "2025-02-25",
+        "2025-03-12",
+        "2025-03-12"
+      ],
+      "evidence_quote": "3/8 Occupational Health Clinic Note/Work Status"
+    },
+    {
+      "status": "scheduled",
+      "occurred_on": null,
+      "scheduled_for_date": "2025-04-22",
+      "scheduled_notice_date": "2025-03-17",
+      "parties": [
+        "Spine & Neurology Group",
+        "Dr. Caldwell"
+      ],
+      "source_note_dates": [
+        "2025-03-17",
+        "2025-03-26",
+        "2025-04-14",
+        "2025-04-15",
+        "2025-04-18",
+        "2025-04-21",
+        "2025-04-21",
+        "2025-04-22"
+      ],
+      "evidence_quote": "Completed WC referral form has been sent to Spine & Neurology Group requesting a Tue/Thu appointment if possible, per clmt's request so her husband can drive her."
+    },
+    {
+      "status": "attended",
+      "occurred_on": "2025-04-22",
+      "scheduled_for_date": null,
+      "scheduled_notice_date": "2025-03-17",
+      "parties": [
+        "Spine & Neurology Group",
+        "Dr. Caldwell"
+      ],
+      "source_note_dates": [
+        "2025-03-17",
+        "2025-04-14",
+        "2025-04-15",
+        "2025-04-18",
+        "2025-04-21",
+        "2025-04-22"
+      ],
+      "evidence_quote": "IE presents to the clinic with complaints of back pain. The visit was an IME with option to treat."
+    },
+    {
+      "status": "scheduled",
+      "occurred_on": null,
+      "scheduled_for_date": "2025-05-01",
+      "scheduled_notice_date": "2025-04-23",
+      "parties": [
+        "PROVIDER"
+      ],
+      "source_note_dates": [
+        "2025-04-23",
+        "2025-05-06"
+      ],
+      "evidence_quote": "Provider has scheduled your claimant for the diagnostic study listed below: MRI LUMBAR SPINE WITHOUT CONTRAST DATE: 05/01/2025 TIME: 2:15 PM"
+    },
+    {
+      "status": "scheduled",
+      "occurred_on": null,
+      "scheduled_for_date": "2025-05-21",
+      "scheduled_notice_date": "2025-04-29",
+      "parties": [
+        "Dr. Farano",
+        "Spine & Neurology Group"
+      ],
+      "source_note_dates": [
+        "2025-04-29",
+        "2025-04-30",
+        "2025-05-08",
+        "2025-05-08",
+        "2025-05-20",
+        "2025-05-21"
+      ],
+      "evidence_quote": "I have received approval from Dr. Farano to see the claimant. She has been booked for a new patient consultation on 5/21 at 10:15 am."
+    },
+    {
+      "status": "attended",
+      "occurred_on": "2025-05-21",
+      "scheduled_for_date": null,
+      "scheduled_notice_date": "2025-04-29",
+      "parties": [
+        "Dr. Farano",
+        "Spine & Neurology Group"
+      ],
+      "source_note_dates": [
+        "2025-04-29",
+        "2025-04-30",
+        "2025-05-08",
+        "2025-05-20",
+        "2025-05-21",
+        "2025-05-23"
+      ],
+      "evidence_quote": "5/21 PM OV notes received from Dr. Farano. Has placed clmt OOW and has recommended injections."
+    },
+    {
+      "status": "scheduled",
+      "occurred_on": null,
+      "scheduled_for_date": "2025-07-03",
+      "scheduled_notice_date": "2025-06-04",
+      "parties": [
+        "Dr. Caldwell"
+      ],
+      "source_note_dates": [
+        "2025-06-04",
+        "2025-06-16",
+        "2025-06-30"
+      ],
+      "evidence_quote": "7/3/25 Dr. Caldwell apt - scheduled for injection"
+    },
+    {
+      "status": "scheduled",
+      "occurred_on": null,
+      "scheduled_for_date": "2025-08-11",
+      "scheduled_notice_date": "2025-07-29",
+      "parties": [
+        "Dr. Caldwell"
+      ],
+      "source_note_dates": [
+        "2025-07-29",
+        "2025-08-18",
+        "2025-08-18",
+        "2025-08-21"
+      ],
+      "evidence_quote": "1. 8/11/25 1:00pm with Dr. Caldwell (ortho)"
+    },
+    {
+      "status": "scheduled",
+      "occurred_on": null,
+      "scheduled_for_date": "2025-08-13",
+      "scheduled_notice_date": "2025-07-29",
+      "parties": [
+        "Dr. Farano"
+      ],
+      "source_note_dates": [
+        "2025-07-29",
+        "2025-08-08",
+        "2025-08-14",
+        "2025-08-18",
+        "2025-08-18"
+      ],
+      "evidence_quote": "2. 8/13 @ 2:45 apt with Dr. Farano (pain management)"
+    },
+    {
+      "status": "scheduled",
+      "occurred_on": null,
+      "scheduled_for_date": "2025-09-23",
+      "scheduled_notice_date": "2025-08-18",
+      "parties": [
+        "Dr. Farano"
+      ],
+      "source_note_dates": [
+        "2025-08-18",
+        "2025-08-21",
+        "2025-08-29"
+      ],
+      "evidence_quote": "NOV is set for 9/23. She is on the cancellation list."
+    }
+  ]
+}

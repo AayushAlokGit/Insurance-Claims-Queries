@@ -1,0 +1,274 @@
+{
+  "claim_id": "1-29RT",
+  "method": "single whole-claim LLM call",
+  "count": 16,
+  "appointments": [
+    {
+      "status": "attended",
+      "occurred_on": "2025-02-05",
+      "scheduled_for_date": null,
+      "scheduled_notice_date": "2025-02-01",
+      "parties": [
+        "Dr. Harmon",
+        "FCM"
+      ],
+      "source_note_dates": [
+        "2025-02-01",
+        "2025-02-06",
+        "2025-02-06",
+        "2025-03-05",
+        "2025-03-06",
+        "2025-03-11",
+        "2025-03-17",
+        "2025-03-19",
+        "2025-08-09"
+      ],
+      "evidence_quote": "Dr. Harmon agreed to assume care as treating provider; appointment scheduled 2-5-25 with FCM assigned to attend."
+    },
+    {
+      "status": "attended",
+      "occurred_on": "2025-02-28",
+      "scheduled_for_date": null,
+      "scheduled_notice_date": "2025-01-17",
+      "parties": [
+        "Dr. Vega"
+      ],
+      "source_note_dates": [
+        "2025-01-17",
+        "2025-02-25",
+        "2025-02-27",
+        "2025-03-26",
+        "2025-03-26",
+        "2025-04-10",
+        "2025-08-09"
+      ],
+      "evidence_quote": "Dr. Vega (Neurology) 3-28-25 | Dr. Vega (Neurology) 3-28-25"
+    },
+    {
+      "status": "attended",
+      "occurred_on": "2025-03-06",
+      "scheduled_for_date": null,
+      "scheduled_notice_date": "2025-02-27",
+      "parties": [
+        "Dr. Harmon"
+      ],
+      "source_note_dates": [
+        "2025-02-27",
+        "2025-03-04",
+        "2025-03-05",
+        "2025-03-06",
+        "2025-03-11",
+        "2025-03-17",
+        "2025-03-19",
+        "2025-08-09"
+      ],
+      "evidence_quote": "Her upcoming appointments: Dr. Harmon (Spine): 3-6-25"
+    },
+    {
+      "status": "attended",
+      "occurred_on": "2025-03-14",
+      "scheduled_for_date": null,
+      "scheduled_notice_date": "2025-02-27",
+      "parties": [
+        "Dr. Sinclair"
+      ],
+      "source_note_dates": [
+        "2025-02-27",
+        "2025-03-04",
+        "2025-03-11",
+        "2025-03-12",
+        "2025-03-17",
+        "2025-08-09"
+      ],
+      "evidence_quote": "Dr. Vega (Neurology) 3-28-25 | Dr. Harmon (Spine) 3-6-25 | Ophthalmology with Dr. Sinclair scheduled 3-14-25."
+    },
+    {
+      "status": "attended",
+      "occurred_on": "2025-03-28",
+      "scheduled_for_date": null,
+      "scheduled_notice_date": "2025-02-27",
+      "parties": [
+        "Dr. Vega"
+      ],
+      "source_note_dates": [
+        "2025-02-27",
+        "2025-03-11",
+        "2025-03-26",
+        "2025-03-26",
+        "2025-04-10",
+        "2025-08-09"
+      ],
+      "evidence_quote": "Dr. Vega (Neurology) 3-28-25 | Dr. Vega (Neurology) 3-28-25"
+    },
+    {
+      "status": "attended",
+      "occurred_on": "2025-04-02",
+      "scheduled_for_date": null,
+      "scheduled_notice_date": "2025-03-12",
+      "parties": [],
+      "source_note_dates": [
+        "2025-03-12",
+        "2025-04-03",
+        "2025-04-14",
+        "2025-04-15",
+        "2025-05-06",
+        "2025-08-09"
+      ],
+      "evidence_quote": "Cervical MRI on 4-2-25 showed postoperative changes at C4-5 and C5-6. Continued foraminal narrowing on the left at C5-6. Bilateral neural foraminal stenosis at C3-4."
+    },
+    {
+      "status": "attended",
+      "occurred_on": "2025-04-11",
+      "scheduled_for_date": null,
+      "scheduled_notice_date": "2025-03-26",
+      "parties": [
+        "Dr. Harmon"
+      ],
+      "source_note_dates": [
+        "2025-03-26",
+        "2025-04-10",
+        "2025-05-06",
+        "2025-08-09"
+      ],
+      "evidence_quote": "Her next appointment with Dr. Harmon is scheduled on 4-11-25 at 10am."
+    },
+    {
+      "status": "attended",
+      "occurred_on": "2025-04-17",
+      "scheduled_for_date": null,
+      "scheduled_notice_date": "2025-04-14",
+      "parties": [],
+      "source_note_dates": [
+        "2025-04-14",
+        "2025-04-15",
+        "2025-05-06",
+        "2025-08-09"
+      ],
+      "evidence_quote": "Outpatient PT initiated on 4-17-25."
+    },
+    {
+      "status": "attended",
+      "occurred_on": "2025-05-16",
+      "scheduled_for_date": null,
+      "scheduled_notice_date": "2025-04-15",
+      "parties": [
+        "Dr. Harmon"
+      ],
+      "source_note_dates": [
+        "2025-04-15",
+        "2025-05-15",
+        "2025-05-16",
+        "2025-08-09"
+      ],
+      "evidence_quote": "She is scheduled to follow-up on 6-27-25 at 10:30 AM."
+    },
+    {
+      "status": "attended",
+      "occurred_on": "2025-05-29",
+      "scheduled_for_date": null,
+      "scheduled_notice_date": null,
+      "parties": [
+        "Dr. Vega"
+      ],
+      "source_note_dates": [
+        "2025-05-30",
+        "2025-05-30"
+      ],
+      "evidence_quote": "She attended a follow-up with Dr. Vega yesterday."
+    },
+    {
+      "status": "attended",
+      "occurred_on": "2025-06-23",
+      "scheduled_for_date": null,
+      "scheduled_notice_date": "2025-06-16",
+      "parties": [],
+      "source_note_dates": [
+        "2025-06-16",
+        "2025-06-17",
+        "2025-06-25",
+        "2025-06-26",
+        "2025-06-30",
+        "2025-08-09"
+      ],
+      "evidence_quote": "EMG on 6-23-25 yielded a normal result."
+    },
+    {
+      "status": "attended",
+      "occurred_on": "2025-06-27",
+      "scheduled_for_date": null,
+      "scheduled_notice_date": "2025-05-16",
+      "parties": [
+        "Dr. Harmon"
+      ],
+      "source_note_dates": [
+        "2025-05-16",
+        "2025-06-26",
+        "2025-06-27",
+        "2025-08-09"
+      ],
+      "evidence_quote": "Her next appointment is scheduled on 7-25-25 at 11am."
+    },
+    {
+      "status": "attended",
+      "occurred_on": "2025-07-25",
+      "scheduled_for_date": null,
+      "scheduled_notice_date": "2025-06-26",
+      "parties": [
+        "Dr. Harmon"
+      ],
+      "source_note_dates": [
+        "2025-06-26",
+        "2025-07-24",
+        "2025-07-25",
+        "2025-08-09"
+      ],
+      "evidence_quote": "She attended her follow-up with Dr. Harmon yesterday 7-25-25."
+    },
+    {
+      "status": "attended",
+      "occurred_on": "2025-08-22",
+      "scheduled_for_date": null,
+      "scheduled_notice_date": "2025-07-24",
+      "parties": [
+        "Dr. Harmon"
+      ],
+      "source_note_dates": [
+        "2025-07-24",
+        "2025-08-21",
+        "2025-08-22"
+      ],
+      "evidence_quote": "Her next appointment is scheduled on 8-22-25 at 10am."
+    },
+    {
+      "status": "attended",
+      "occurred_on": "2025-10-14",
+      "scheduled_for_date": null,
+      "scheduled_notice_date": "2025-09-25",
+      "parties": [
+        "Bridge Functional Capacity Evaluators"
+      ],
+      "source_note_dates": [
+        "2025-09-25",
+        "2025-10-17",
+        "2025-10-29"
+      ],
+      "evidence_quote": "FCE completed 10/14/25 revealed sedentary to light-duty capacity; no lifting greater than 10 lbs, limited prolonged standing, bilateral AFO required for ambulation."
+    },
+    {
+      "status": "attended",
+      "occurred_on": "2025-11-14",
+      "scheduled_for_date": null,
+      "scheduled_notice_date": "2025-10-29",
+      "parties": [
+        "Dr. Harmon"
+      ],
+      "source_note_dates": [
+        "2025-10-29",
+        "2025-11-07",
+        "2025-11-14",
+        "2025-11-21"
+      ],
+      "evidence_quote": "Her next appointment with Dr. Harmon is scheduled for 11-14-25."
+    }
+  ]
+}

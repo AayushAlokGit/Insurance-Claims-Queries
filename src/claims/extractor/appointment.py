@@ -25,6 +25,7 @@ extractor.md §6:
 
 from __future__ import annotations
 
+import logging
 import re
 import uuid
 from datetime import date
@@ -36,6 +37,39 @@ from claims.extractor._evidence import EVIDENCE_QUOTE_GUIDANCE
 from claims.llm import StructuredLLM, quote_in_body
 from claims.llm.base import LLMError
 from claims.models import AppointmentAttributes, Event, Note
+
+_log = logging.getLogger(__name__)
+
+
+# Honorifics / degree suffixes the LLM occasionally leaves on a name.
+# Stripped before the party-in-quote substring check so that "Dr.
+# Farano" in the LLM's parties list still matches "Farano" in the
+# quote (and vice versa).
+_PARTY_STRIP_RE = re.compile(
+    r"^(dr|mr|mrs|ms|atty)\.?\s+|,\s*(md|do|np|pa|rn|lpn|esq)\.?$",
+    re.IGNORECASE,
+)
+
+
+def _normalize_party_for_check(p: str) -> str:
+    """Strip honorifics / suffixes and lowercase for the in-quote
+    substring check. Display strings keep their original casing."""
+    s = p.strip()
+    # apply twice to catch "Dr. Mr." or both-ends matches
+    s = _PARTY_STRIP_RE.sub("", s)
+    s = _PARTY_STRIP_RE.sub("", s)
+    return s.strip().lower()
+
+
+def _party_supported_by_quote(party: str, quote: str) -> bool:
+    """Party is supported iff its normalized name (>= 2 chars after
+    stripping honorifics/suffixes) appears as a case-insensitive
+    substring of the evidence quote. Single-letter abbreviations
+    ('F', 'C') and placeholders are rejected on length."""
+    norm = _normalize_party_for_check(party)
+    if len(norm) < 2:
+        return False
+    return norm in quote.lower()
 
 # --- Prefilter ---------------------------------------------------
 
@@ -168,6 +202,14 @@ PARTIES — list every named individual and organization party to THIS specific 
 - The facility / clinic / hospital / practice where it occurs — must be a named org, not a generic word.
 - A case manager, field nurse, or interpreter PHYSICALLY PRESENT at the encounter, ONLY if personally named in the note.
 
+PARTY-IN-QUOTE RULE (hard requirement): Every party you list MUST appear by name inside the `evidence_quote` you choose for that same appointment. If your evidence_quote does not contain the party's name, do not list that party. Choose a longer or different verbatim substring of the note that includes BOTH the date (or a clear date referent like "yesterday") AND every party — or omit the party / event.
+
+EXAMPLE of joint-reference failure (do NOT do this):
+> Body: "Dr. Farano wanted to see her. Unfortunately, she was unable to attend her appointments scheduled for 08/11 and 08/13."
+> Wrong: emit two events tagging 08/11 with Farano and 08/13 with Farano, status=missed.
+> Wrong because: the 08/11 and 08/13 sentence does not name a doctor; Dr. Farano is in a different sentence and may belong to one, both, or neither date.
+> Correct: either (a) emit two events with parties: [] (date known, party not attributable in the same clause), or (b) emit nothing for the dates whose provider is ambiguous.
+
 DO NOT put in `parties`:
 - The claimant under any label — pronouns ("she", "he"), role labels ("claimant", "patient", "EE", "IE", "IW", "HR"), or pseudonyms ("Patient A", "the IW", "Subject").
 - Referring providers named only in history / treatment plan / referrals.
@@ -175,6 +217,7 @@ DO NOT put in `parties`:
 - Specialty names ("ophthalmology", "neurology"). Specialty is not a party.
 - Generic phrases ("office", "the doctor", "the field nurse").
 - Unnamed roles ("FCM", "TCM", "field nurse", "case manager", "interpreter") on their own.
+- Single-letter abbreviations or placeholders ("F", "C", "Dr. F", "Dr. _").
 
 Each entry names ONE entity. Strip honorifics ("Dr.", "Mr."), degree suffixes (", MD", ", DO"), and location suffixes ("'s office", "at <clinic>"). A doctor and the clinic they work at are TWO entries, not one. Emit an empty list if no identifiable party is named — never invent one.
 
@@ -229,14 +272,30 @@ class AppointmentExtractor:
         # Deduplicate parties at construction time — LLMs
         # occasionally repeat the same entity in different surface
         # forms within one entry. Preserve order for stability.
+        # Also enforce the PARTY-IN-QUOTE rule: any party whose
+        # normalized name does not appear in evidence_quote is the
+        # LLM cross-attributing from elsewhere in the note. Drop it
+        # and log so the cross-attribution failure is auditable.
         seen: set[str] = set()
         parties: list[str] = []
+        dropped: list[str] = []
         for p in appt.parties:
             stripped = p.strip()
             if not stripped or stripped.lower() in seen:
                 continue
             seen.add(stripped.lower())
+            if not _party_supported_by_quote(stripped, appt.evidence_quote):
+                dropped.append(stripped)
+                continue
             parties.append(stripped)
+        if dropped:
+            _log.info(
+                "party-in-quote drop note=%s date=%s dropped=%s quote=\"%s\"",
+                note.note_id,
+                appt.appointment_date,
+                dropped,
+                appt.evidence_quote.replace("\n", " ")[:80],
+            )
 
         if appt.status == "scheduled":
             attrs = AppointmentAttributes(

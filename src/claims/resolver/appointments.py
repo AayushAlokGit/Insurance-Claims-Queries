@@ -107,16 +107,20 @@ def _should_merge(a: Event, b: Event) -> bool:
     b_date = _encounter_date(b_attrs)
     if a_date is None or b_date is None:
         # No date on at least one side — can't anchor the merge.
-        # Fall back to party overlap only (rare; mostly the LLM
-        # extractor emitting an undated past visit).
-        overlap = parties_overlap(a_attrs.parties, b_attrs.parties)
-        if not overlap:
-            _log.debug(
-                "no-merge reason=undated-no-party-overlap a=(%s) b=(%s)",
-                _ev_short(a),
-                _ev_short(b),
-            )
-        return overlap
+        # An undated event has no stable encounter identity, so it
+        # stays a singleton rather than risk becoming a cluster
+        # magnet via the empty-party overlap fallback.
+        # (Earlier this fell through to `parties_overlap` only,
+        # which returns True when either side is empty — combined
+        # with the party-in-quote drop in the extractor, that turned
+        # dateless empty-party events into cluster magnets that
+        # collapsed unrelated visits.)
+        _log.debug(
+            "no-merge reason=undated-side a=(%s) b=(%s)",
+            _ev_short(a),
+            _ev_short(b),
+        )
+        return False
     if a_date != b_date:
         if parties_overlap(a_attrs.parties, b_attrs.parties):
             # High-signal case: same parties, different dates. Often a

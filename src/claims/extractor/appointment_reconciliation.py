@@ -88,8 +88,7 @@ def _can_join(seed: Event, cand: Event) -> bool:
     """Join the cluster if anchor dates are within
     `_DATE_TOLERANCE_DAYS` AND parties overlap (or one side has no
     named parties — empty candidates absorb into the matching dated
-    cluster). Dateless candidates never merge — they stay singletons
-    (avoids the cluster-magnet bug)."""
+    cluster)."""
     s_date, c_date = _anchor(seed), _anchor(cand)
     if s_date is None or c_date is None:
         return False

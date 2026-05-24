@@ -16,7 +16,7 @@ from datetime import date
 
 import pytest
 
-from claims.extractor.reconciliation import (
+from claims.extractor.appointment_reconciliation import (
     _ClusterResolution,
     _can_join,
     _encounter_date,

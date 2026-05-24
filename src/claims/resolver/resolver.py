@@ -1,9 +1,10 @@
 """Top-level resolver: dispatches per-event-type, glues passes.
 
-See resolver.md §3. MVP coverage:
+Under DD-019, appointments bypass the resolver — they are
+reconciled in `claims.extractor.reconciliation` before reaching
+this stage. The resolver handles:
 - reserve_change: cross-note delta derivation, drop delta=0
-- appointment: dedup + status promotion within a date window
-- return_to_work / rtw_terminal: pass-through (Phase 10 fills these)
+- return_to_work / rtw_terminal: identity-merge / pass-through
 """
 
 from __future__ import annotations
@@ -11,7 +12,6 @@ from __future__ import annotations
 import logging
 
 from claims.models import Event
-from claims.resolver.appointments import resolve_appointments
 from claims.resolver.reserve_change import resolve_reserve_changes
 from claims.resolver.rtw import resolve_rtw
 
@@ -26,7 +26,6 @@ def resolve(events: list[Event]) -> list[Event]:
     out: list[Event] = []
     for event_type, fn in (
         ("reserve_change", resolve_reserve_changes),
-        ("appointment", resolve_appointments),
         ("return_to_work", resolve_rtw),
     ):
         incoming = by_type.get(event_type, [])
@@ -44,4 +43,14 @@ def resolve(events: list[Event]) -> list[Event]:
     if terminals:
         _log.debug("resolve rtw_terminal: %d passthrough", len(terminals))
     out.extend(terminals)
+    # Defensive: an appointment slipping into resolve() is a bug
+    # under DD-019. Log loudly rather than swallowing.
+    stragglers = by_type.get("appointment", [])
+    if stragglers:
+        _log.warning(
+            "resolve: %d appointment event(s) reached the resolver — "
+            "should have gone through reconcile_appointments (DD-019)",
+            len(stragglers),
+        )
+        out.extend(stragglers)
     return out

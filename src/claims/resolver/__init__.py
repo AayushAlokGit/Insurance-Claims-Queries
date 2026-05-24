@@ -2,19 +2,19 @@
 
 Top-level entry: `resolve(events) -> list[Event]`. Dispatches
 per event_type; merges duplicates; derives cross-event fields.
+
+Appointments do not flow through the resolver under DD-019 —
+they are handled by per-claim reconciliation (see
+`claims.extractor.reconciliation`). The resolver still handles
+reserve_change, return_to_work, and rtw_terminal.
 """
 
-from claims.resolver.appointments import resolve_appointments
-from claims.resolver.parties import normalize_party, parties_overlap
 from claims.resolver.reserve_change import resolve_reserve_changes
 from claims.resolver.resolver import resolve
 from claims.resolver.rtw import resolve_rtw
 
 __all__ = [
-    "normalize_party",
-    "parties_overlap",
     "resolve",
-    "resolve_appointments",
     "resolve_reserve_changes",
     "resolve_rtw",
 ]

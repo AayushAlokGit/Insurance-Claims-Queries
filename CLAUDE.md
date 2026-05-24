@@ -57,11 +57,21 @@ Use these when grepping for traces of a run or comparing outputs across runs. Pa
 | Ingested DB | `./sample_claim_notes/query_outputs/sample.db` | SQLite; rebuilt by the ingest script. |
 | Per-claim query output (JSON) | `./sample_claim_notes/query_outputs/<claim_id>.json` | One file per claim, containing all four queries. Sections delimited by `=== q1 ===` etc. Regenerate via `python scripts/write_query_outputs.py --claim-id <id>` — the `query` CLI prints to stdout only, it does not write these files. |
 
-**Greppable log lines added for debugging Q2 / Q4 issues:**
-- Extractor stage: `extract note=<id> note_date=<d> by=<Extractor> :: appointment date=<d> kind=<scheduled|occurred> status=<s> parties=[...] evidence="..."` — one INFO line per emitted event.
-- Resolver stage: `merge cluster_size=N chosen_status=<s> members=[...] input_statuses=[...]` — one INFO line per merge group of size >1.
-- Resolver near-miss: `no-merge reason=date-mismatch-but-parties-overlap a=(...) b=(...)` — INFO. Catches the note-write-date vs DOS off-by-N pattern that lets the same encounter slip into two clusters.
-- Other no-merge reasons emit at DEBUG.
+**Greppable log lines for debugging the appointment pipeline (DD-019):**
+
+Per-note candidate generation (extractor):
+- `extract note=<id> note_date=<d> by=<Extractor> :: appointment date=<d> kind=<scheduled|occurred> status=<s> parties=[...] evidence="..."` — INFO, one line per per-note candidate the LLM emitted. Grep by note_id, party, date, or status to trace where a candidate came from.
+
+Per-claim reconciliation (DD-019):
+- `reconcile claim=<id> candidates=<N>` — INFO, before the LLM call.
+- `recon claim=<id> :: appointment date=<d> kind=<occurred|scheduled> status=<s> parties=[...] notice=<d> contrib=[cid,...] evidence="..."` — INFO, one line per canonical appointment the reconciliation LLM produced. `contrib` lists the candidate IDs (their indices in the per-claim candidate list) that contributed to this canonical entry.
+- `recon claim=<id> dropped <N> candidate(s) (no contribution): [...]` — INFO, the candidates the reconciliation LLM chose to discard. Useful when something expected is missing from the canonical list.
+- `reconcile claim=<id> candidates=<N> -> canonical=<M>` — INFO, summary count.
+- `reconcile claim=<id> failed: ... -- falling back to raw candidates` — WARNING, the LLM call errored; raw candidates pass through.
+
+Other resolver stages (non-appointment):
+- `resolve <event_type>: N in -> M out` — DEBUG, reserve/RTW dedup counts.
+- `resolve: N appointment event(s) reached the resolver — should have gone through reconcile_appointments (DD-019)` — WARNING, defensive — appointments are not supposed to flow through the resolver under DD-019.
 
 ---
 

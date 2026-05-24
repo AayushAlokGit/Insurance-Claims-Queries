@@ -25,7 +25,6 @@ extractor.md §6:
 
 from __future__ import annotations
 
-import logging
 import re
 import uuid
 from datetime import date
@@ -38,112 +37,39 @@ from claims.llm import StructuredLLM, quote_in_body
 from claims.llm.base import LLMError
 from claims.models import AppointmentAttributes, Event, Note
 
-_log = logging.getLogger(__name__)
 
+# --- Prefilter (DD-019) ------------------------------------------
+#
+# Per-note extraction is a permissive CANDIDATE GENERATOR under
+# DD-019: false positives are fine here because the per-claim
+# reconciliation pass cleans them up. The prefilter is just a
+# cheap "looks like it could mention an appointment" gate.
 
-# Honorifics / degree suffixes the LLM occasionally leaves on a name.
-# Stripped before the party-in-quote substring check so that "Dr.
-# Farano" in the LLM's parties list still matches "Farano" in the
-# quote (and vice versa).
-_PARTY_STRIP_RE = re.compile(
-    r"^(dr|mr|mrs|ms|atty)\.?\s+|,\s*(md|do|np|pa|rn|lpn|esq)\.?$",
+_RE_STATUS_VERBS = re.compile(
+    r"\b(attended|missed|no[- ]show|did not show|DNA"
+    r"|cancell?ed|seen by|EE attended)\b",
+    re.IGNORECASE,
+)
+_RE_SAW_ON = re.compile(r"\bsaw\b.{0,40}\bon\b", re.IGNORECASE)
+_RE_APPT_CONTEXT = re.compile(
+    r"\b(appointment|visit|follow[- ]?up|scheduled"
+    r"|seen|consult|exam|evaluation|referral)\b",
+    re.IGNORECASE,
+)
+_RE_HAS_DATE = re.compile(
+    r"\d{1,2}[-/.]\d{1,2}"
+    r"|\b(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)"
+    r"(uary|ruary|ch|il|e|y|ust|ember|tober)?\b",
     re.IGNORECASE,
 )
 
 
-def _normalize_party_for_check(p: str) -> str:
-    """Strip honorifics / suffixes and lowercase for the in-quote
-    substring check. Display strings keep their original casing."""
-    s = p.strip()
-    # apply twice to catch "Dr. Mr." or both-ends matches
-    s = _PARTY_STRIP_RE.sub("", s)
-    s = _PARTY_STRIP_RE.sub("", s)
-    return s.strip().lower()
-
-
-def _party_supported_by_quote(party: str, quote: str) -> bool:
-    """Party is supported iff its normalized name (>= 2 chars after
-    stripping honorifics/suffixes) appears as a case-insensitive
-    substring of the evidence quote. Single-letter abbreviations
-    ('F', 'C') and placeholders are rejected on length."""
-    norm = _normalize_party_for_check(party)
-    if len(norm) < 2:
-        return False
-    return norm in quote.lower()
-
-
-# Relative-date markers: "yesterday", "today", "this morning",
-# "tomorrow", "last <weekday>". Accepted as evidence of a specific
-# date because the prompt instructs the LLM to resolve them from
-# the note's date. We trust that resolution.
-_REL_DATE_RE = re.compile(
-    r"\b(yesterday|today|tonight|this (?:morning|afternoon|evening)"
-    r"|tomorrow|last\s+(?:mon|tues?|wed(?:nes)?|thur?s?|fri|sat|sun)"
-    r"(?:day)?)\b",
-    re.IGNORECASE,
-)
-
-_MONTH_NAMES_FULL = (
-    "January", "February", "March", "April", "May", "June",
-    "July", "August", "September", "October", "November", "December",
-)
-_MONTH_NAMES_ABBR = (
-    "Jan", "Feb", "Mar", "Apr", "May", "Jun",
-    "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
-)
-
-
-def _date_surface_forms(d: date) -> list[str]:
-    """Every reasonable surface form of `d` we might see in the
-    note body: M/D, MM/DD, M-D-YY, M.D.YYYY, "August 11", "11
-    August", etc. Quote check is case-insensitive substring on
-    these forms."""
-    m, day = d.month, d.day
-    y2, y4 = d.year % 100, d.year
-    forms: list[str] = []
-    for sep in ("/", "-", "."):
-        forms.append(f"{m}{sep}{day}")
-        forms.append(f"{m:02d}{sep}{day:02d}")
-        for y in (y2, y4):
-            forms.append(f"{m}{sep}{day}{sep}{y}")
-            forms.append(f"{m:02d}{sep}{day:02d}{sep}{y}")
-    full = _MONTH_NAMES_FULL[m - 1]
-    abbr = _MONTH_NAMES_ABBR[m - 1]
-    for name in (full, abbr):
-        forms.append(f"{name} {day}")
-        forms.append(f"{day} {name}")
-        forms.append(f"{day}{name}")  # "11August" — rare but cheap
-    return forms
-
-
-def _date_supported_by_quote(d: date | None, quote: str) -> bool:
-    """The appointment_date `d` is supported iff (a) a relative
-    marker resolvable from note_date appears in the quote, OR (b)
-    some surface form of `d` appears in the quote. When `d` is
-    None, there is no claim to verify — return True (the resolver
-    will leave the event a singleton)."""
-    if d is None:
+def _passes_prefilter(body: str) -> bool:
+    if _RE_STATUS_VERBS.search(body) or _RE_SAW_ON.search(body):
         return True
-    if _REL_DATE_RE.search(quote):
-        return True
-    lower = quote.lower()
-    return any(f.lower() in lower for f in _date_surface_forms(d))
-
-# --- Route gate (DD-018) -----------------------------------------
-#
-# The LLM runs ONLY on high-signal note shapes — Resolution
-# Strategy summaries (periodic recaps with clean per-line
-# attribution) or notes that already carry a templated
-# `Date of Appointment:` block (canonical visit-summary shape).
-# Everything else (Contact emails, Reserving entries, surveillance
-# write-ups, paperwork chatter) is skipped: those were the
-# dominant phantom source in earlier runs.
-#
-# Marker + Reserve extractors still run on every note.
-
-_RE_DOA_TEMPLATE = re.compile(
-    r"Date of Appointment\s*:", re.IGNORECASE
-)
+    return bool(
+        _RE_HAS_DATE.search(body) and _RE_APPT_CONTEXT.search(body)
+    )
 
 
 # --- LLM response schema -----------------------------------------
@@ -287,16 +213,11 @@ class AppointmentExtractor:
         self._llm = llm
 
     def can_handle(self, note: Note) -> bool:
-        # DD-018 route gate: only run the LLM on Resolution Strategy
-        # summaries or notes carrying a DOA template. Both are high-
-        # signal shapes; everything else is communication chatter
-        # that produced most of the phantom population.
-        is_resolution_strategy = (
-            note.activity is not None
-            and note.activity.strip().lower() == "resolution strategy"
-        )
-        has_doa_template = bool(_RE_DOA_TEMPLATE.search(note.body))
-        return is_resolution_strategy or has_doa_template
+        # DD-019: permissive prefilter. Per-note extraction is a
+        # candidate generator; the per-claim reconciliation LLM is
+        # responsible for filtering noise. Route every note that
+        # plausibly mentions an appointment.
+        return _passes_prefilter(note.body)
 
     def extract(self, note: Note) -> list[Event]:
         try:
@@ -312,24 +233,6 @@ class AppointmentExtractor:
         for appt in response.appointments:
             if not quote_in_body(appt.evidence_quote, note.body):
                 continue  # safety net — drop hallucinated quotes
-            if not _date_supported_by_quote(
-                appt.appointment_date, appt.evidence_quote
-            ):
-                # The LLM claimed a date that doesn't live in its
-                # own evidence quote — the date came from a
-                # different sentence. Null the date out and let
-                # the resolver keep it as a dateless singleton
-                # rather than asserting a (date, status, party)
-                # tuple we can't verify.
-                _log.info(
-                    "date-in-quote drop note=%s claimed_date=%s "
-                    "status=%s quote=\"%s\"",
-                    note.note_id,
-                    appt.appointment_date,
-                    appt.status,
-                    appt.evidence_quote.replace("\n", " ")[:80],
-                )
-                appt = appt.model_copy(update={"appointment_date": None})
             events.append(self._to_event(note, appt))
         return events
 
@@ -340,30 +243,17 @@ class AppointmentExtractor:
         # Deduplicate parties at construction time — LLMs
         # occasionally repeat the same entity in different surface
         # forms within one entry. Preserve order for stability.
-        # Also enforce the PARTY-IN-QUOTE rule: any party whose
-        # normalized name does not appear in evidence_quote is the
-        # LLM cross-attributing from elsewhere in the note. Drop it
-        # and log so the cross-attribution failure is auditable.
+        # No party-in-quote check here under DD-019: per-note is a
+        # permissive candidate generator; cross-attribution cleanup
+        # lives in the per-claim reconciliation pass.
         seen: set[str] = set()
         parties: list[str] = []
-        dropped: list[str] = []
         for p in appt.parties:
             stripped = p.strip()
             if not stripped or stripped.lower() in seen:
                 continue
             seen.add(stripped.lower())
-            if not _party_supported_by_quote(stripped, appt.evidence_quote):
-                dropped.append(stripped)
-                continue
             parties.append(stripped)
-        if dropped:
-            _log.info(
-                "party-in-quote drop note=%s date=%s dropped=%s quote=\"%s\"",
-                note.note_id,
-                appt.appointment_date,
-                dropped,
-                appt.evidence_quote.replace("\n", " ")[:80],
-            )
 
         if appt.status == "scheduled":
             attrs = AppointmentAttributes(

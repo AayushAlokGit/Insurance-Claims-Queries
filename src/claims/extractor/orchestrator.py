@@ -2,10 +2,10 @@
 
 Two registry levels:
 - `default_rule_extractors()` — rule-only extractors that need no
-  LLM client (Reserve, Marker). Cheap; safe to call from any
-  test.
-- `default_extractors(llm)` — full registry including the LLM
-  appointment extractor. Pass a StructuredLLM (real or fake).
+  LLM client (Reserve only under DD-019; Marker was retired when
+  the LLM appointment extractor became the sole candidate source).
+- `default_extractors(llm)` — full registry: Reserve + the three
+  LLM extractors. Pass a StructuredLLM (real or fake).
 
 `run_all` accepts an explicit extractors list. When none is
 given, it falls back to the rule-only registry — so existing
@@ -17,7 +17,6 @@ from __future__ import annotations
 import logging
 
 from claims.extractor.appointment import AppointmentExtractor
-from claims.extractor.appointment_marker import AppointmentMarkerExtractor
 from claims.extractor.base import Extractor
 from claims.extractor.reserve_change import ReserveChangeExtractor
 from claims.extractor.rtw import ReturnToWorkExtractor
@@ -53,7 +52,6 @@ def _summarize(ev: Event) -> str:
 def default_rule_extractors() -> list[Extractor]:
     return [
         ReserveChangeExtractor(),
-        AppointmentMarkerExtractor(),
     ]
 
 

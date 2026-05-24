@@ -74,39 +74,33 @@ def _note(
     )
 
 
-# --- Route gate (DD-018) -----------------------------------------
+# --- Prefilter (DD-019) ------------------------------------------
 
 
-def test_route_gate_accepts_resolution_strategy_notes() -> None:
-    """RS notes are the periodic recap shape — always routed."""
+def test_prefilter_status_verb_branch() -> None:
+    """DD-019 per-note is a permissive candidate generator: any
+    status verb routes the note to the LLM."""
     ext = AppointmentExtractor(_FakeLLM(AppointmentExtractionResponse()))
-    assert ext.can_handle(
-        _note("EE attended PT on 6/3", activity="Resolution Strategy")
-    )
-    assert ext.can_handle(
-        _note(
-            "SINCE LAST ACTION PLAN: missed 8/13 OV.",
-            activity="Resolution Strategy",
-        )
-    )
+    assert ext.can_handle(_note("EE attended PT on 6/3"))
+    assert ext.can_handle(_note("Missed the 8/13 follow-up"))
+    assert ext.can_handle(_note("Claimant no-show"))
 
 
-def test_route_gate_accepts_doa_template_notes() -> None:
-    """Any note carrying a `Date of Appointment:` block is the
-    canonical visit-summary shape — routed regardless of Activity."""
+def test_prefilter_date_plus_context_branch() -> None:
+    """Scheduling-only notes (date + appointment context, no
+    status verb) also reach the LLM under DD-019."""
     ext = AppointmentExtractor(_FakeLLM(AppointmentExtractionResponse()))
-    assert ext.can_handle(
-        _note("Date of Appointment: 6-3-25\nName of physician: Dr. Harmon")
-    )
+    assert ext.can_handle(_note("Follow-up visit set for 9-23"))
+    assert ext.can_handle(_note("Consult on Apr 22 2025"))
 
 
-def test_route_gate_rejects_contact_chatter() -> None:
-    """Notes without a DOA template and outside RS activity are
-    skipped, even when they contain status verbs or dates."""
+def test_prefilter_rejects_non_appointment_notes() -> None:
+    """No status verb and no date+context → still cheap to skip."""
     ext = AppointmentExtractor(_FakeLLM(AppointmentExtractionResponse()))
-    assert not ext.can_handle(_note("EE attended PT on 6/3"))  # Investigation
-    assert not ext.can_handle(_note("Missed the 8/13 follow-up"))
     assert not ext.can_handle(_note("Pure prose with no signals."))
+    assert not ext.can_handle(
+        _note("Account number 2100000000 - Company WW")
+    )
 
 
 # --- Conversion --------------------------------------------------

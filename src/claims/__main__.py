@@ -28,7 +28,11 @@ from pathlib import Path
 
 from dotenv import load_dotenv
 
-from claims.extractor import default_extractors, run_all
+from claims.extractor import (
+    default_extractors,
+    reconcile_appointments,
+    run_all,
+)
 from claims.llm import get_client
 from claims.loader import infer_claim_metadata, parse_file
 from claims.log_config import setup_logging
@@ -171,10 +175,34 @@ def _cmd_ingest(args: argparse.Namespace) -> int:
     for et, n in sorted(by_type.items()):
         log.info("  raw %s: %d", et, n)
 
-    # --- Resolver: dedup + cross-event derivations -----------
-    # Reserve deltas, appointment proximity-merge + status
-    # promotion, RTW identity-merge.
-    resolved = resolve(raw_events)
+    # --- Reconciliation (DD-019): per-claim LLM call --------
+    # Appointments use a per-claim reconciliation pass instead of
+    # the resolver's per-pair merge. The reconciliation LLM sees
+    # every candidate at once and produces the canonical list —
+    # the cross-note attribution context that the per-note layer
+    # cannot have. If no LLM is configured (`--no-llm`), pass
+    # candidates through unchanged.
+    appt_candidates = [e for e in raw_events if e.event_type == "appointment"]
+    other_events = [e for e in raw_events if e.event_type != "appointment"]
+    if args.no_llm:
+        reconciled_appts = appt_candidates
+        log.info(
+            "reconciliation skipped (--no-llm); %d appt candidates "
+            "pass through",
+            len(appt_candidates),
+        )
+    else:
+        reconciled_appts = reconcile_appointments(
+            loaded.header.claim_id,
+            date.fromisoformat(dol_str),
+            appt_candidates,
+            llm,
+        )
+
+    # --- Resolver: dedup + cross-event derivations (non-appt) -
+    # Reserve deltas + RTW identity-merge. Appointments now bypass
+    # the resolver under DD-019.
+    resolved = resolve(other_events) + reconciled_appts
     log.info("resolved events: %d", len(resolved))
     by_type = {}
     for ev in resolved:

@@ -537,6 +537,8 @@ are unaffected.
 ---
 
 ## DD-016 — Appointment identity is `(claim_id, encounter_date, party-overlap)`; LLM emits a `parties` list
+**Status:** Superseded by DD-019 (per-claim reconciliation replaces the merge key for appointments).
+
 **Status:** Accepted · **Date:** 2026-05-23
 
 **Context.** The Phase 12 verification audit surfaced a class of
@@ -745,6 +747,8 @@ both clinicians, so an auditor sees the collapse). Bounded-and-
 visible is acceptable; unbounded-and-silent is not.
 
 ## DD-017 — Appointment status precedence is asymmetric; recency breaks ties
+**Status:** Superseded by DD-019 (precedence rule moved into the reconciliation prompt).
+
 **Status:** Accepted · **Date:** 2026-05-23
 
 **Context.** The Phase 12 verification audit surfaced a class of
@@ -896,7 +900,7 @@ re-litigation; the rename just made the merged-event audit story
 complete.
 
 ## DD-018 — Route the LLM appointment extractor by note shape
-**Status:** Accepted · **Date:** 2026-05-23
+**Status:** Superseded by DD-019 · **Date:** 2026-05-23
 
 **Context.** Running the LLM appointment extractor on every note made Contact / Investigation / Reserving notes (paperwork, emails, surveillance, scheduling chatter) the dominant source of phantom appointments — cross-attributed parties, hallucinated dates near templated ones, claimant-as-party.
 
@@ -911,6 +915,23 @@ Marker + Reserve extractors keep running on every note (rule-based, cheap, no FP
 **Rejected.** Tightening the prompt further (already long; rules compete). Strict RS-only (loses visit-summary DOA blocks like the MMI declaration note).
 
 **Known coverage loss.** One-off mentions in narrative-only notes (e.g., retrospective ER mention in an intake's HPI section; standalone PT scheduling notices) — acceptable for Q2 count / Q4 lag.
+
+## DD-019 — Per-claim appointment reconciliation (two-pass LLM)
+**Status:** Accepted · **Date:** 2026-05-23
+
+**Context.** Per-note appointment extraction plus a resolver-side pair-wise merge accreted nine interacting rules (DD-016, DD-017, DD-018, PARTY-IN-QUOTE, DATE-IN-QUOTE, dateless-singleton, empty-party fallback, marker extractor, the route gate) to handle cross-note attribution. Each piece fixed a real failure mode but created new ones in interaction. The fundamental gap: cross-note attribution needs cross-note context, which per-note extraction cannot have.
+
+**Decision.** Two-pass LLM:
+1. **Per-note candidate generator** (permissive). The LLM appointment extractor runs on every note that loosely mentions an appointment (status verb OR date + appt-context). Emits raw candidates. No PARTY-IN-QUOTE / DATE-IN-QUOTE check, no DD-018 route gate. Marker extractor retired.
+2. **Per-claim reconciliation** (one LLM call per claim). Sees all candidates at once. Clusters duplicates, applies status precedence (the DD-017 rule, now in the prompt), unions parties, picks the earliest scheduling notice, drops obvious phantoms.
+
+Resolver still handles `reserve_change`, `return_to_work`, `rtw_terminal`. Appointments bypass the resolver entirely.
+
+**Why.** Modern context windows fit a whole claim's candidate set in one call. The reconciliation LLM can disambiguate cross-attribution (e.g., "8/11 missed Caldwell" vs. "8/11 missed Farano") because it sees every note's evidence side-by-side — something per-note + pair-wise merge fundamentally cannot do. Replacing nine rules with one prompt is a complexity reduction, not just a substitution.
+
+**Supersedes.** DD-016 (merge key), DD-017 (precedence rule — moved into the recon prompt), DD-018 (route gate — replaced by permissive prefilter).
+
+**Rejected.** (a) Full claim-level extraction in one LLM call (drops per-note traces; harder to debug). (b) Tightening the existing prompt / rules further (we'd already hit the ceiling). (c) Flag-gated rollout (kept old DDs alive longer than useful for a small project).
 
 <!-- Append new decisions below this line. Template:
 

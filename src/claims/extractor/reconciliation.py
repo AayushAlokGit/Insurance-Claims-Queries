@@ -81,16 +81,19 @@ def _anchor(ev: Event) -> date | None:
     return a.scheduled_for_date or a.occurred_on
 
 
+_DATE_TOLERANCE_DAYS = 3
+
+
 def _can_join(seed: Event, cand: Event) -> bool:
-    """Join the cluster if anchor dates are within 1 day AND parties
-    overlap (or one side has no named parties — Marker-style empty
-    candidates absorb into the matching dated cluster). Dateless
-    candidates never merge — they stay singletons (avoids the
-    cluster-magnet bug)."""
+    """Join the cluster if anchor dates are within
+    `_DATE_TOLERANCE_DAYS` AND parties overlap (or one side has no
+    named parties — empty candidates absorb into the matching dated
+    cluster). Dateless candidates never merge — they stay singletons
+    (avoids the cluster-magnet bug)."""
     s_date, c_date = _anchor(seed), _anchor(cand)
     if s_date is None or c_date is None:
         return False
-    if abs((s_date - c_date).days) > 1:
+    if abs((s_date - c_date).days) > _DATE_TOLERANCE_DAYS:
         return False
     s_parties = _norm_set(seed.attributes.parties)  # type: ignore[union-attr]
     c_parties = _norm_set(cand.attributes.parties)  # type: ignore[union-attr]

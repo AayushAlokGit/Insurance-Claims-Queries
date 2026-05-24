@@ -107,9 +107,18 @@ def test_can_join_same_date_empty_party_absorbs() -> None:
     assert _can_join(a, b)
 
 
-def test_no_join_when_date_drift_exceeds_one() -> None:
-    a = _appt(eid="a", occurred_on=date(2025, 6, 26), parties=("Harmon",))
-    b = _appt(eid="b", occurred_on=date(2025, 6, 28), parties=("Harmon",))
+def test_can_join_within_three_day_tolerance() -> None:
+    """A 3-day drift with shared party still merges (catches the
+    Sinclair 3/11 vs 3/14 and Vega 5/29 vs 6/2 same-visit splits)."""
+    a = _appt(eid="a", occurred_on=date(2025, 5, 29), parties=("Vega",))
+    b = _appt(eid="b", occurred_on=date(2025, 6, 1), parties=("Vega",))
+    assert _can_join(a, b)
+
+
+def test_no_join_when_date_drift_exceeds_tolerance() -> None:
+    """Same-party PT sessions >= 4 days apart stay separate visits."""
+    a = _appt(eid="a", occurred_on=date(2025, 6, 7), parties=("Valley PT Group",))
+    b = _appt(eid="b", occurred_on=date(2025, 6, 12), parties=("Valley PT Group",))
     assert not _can_join(a, b)
 
 

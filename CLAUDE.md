@@ -2,7 +2,7 @@
 
 This repository is the **Adaptional Take-Home Exercise**: design and (eventually) build a system that ingests unstructured workers'-compensation claim notes, parses them into structured events with an LLM, stores them in SQLite, and answers four canned queries over a corpus.
 
-**Status:** design-complete (md docs under `./docs/`); implementation in progress — see `./docs/implementation-plan.md` for the phased roadmap. Several long md files capture deeply iterated design decisions. Do not bulldoze past them. Read in the order below before suggesting changes or writing code.
+**Status:** implementation complete; design docs under `./docs/` are the spec, not a retrospective. Several long md files capture deeply iterated design decisions. Do not bulldoze past them. Read in the order below before suggesting changes or writing code.
 
 ---
 

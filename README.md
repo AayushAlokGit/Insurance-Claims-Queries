@@ -134,7 +134,6 @@ this order (also tracked in `CLAUDE.md`):
 7. [`docs/resolver.md`](docs/resolver.md) — Resolver algorithm.
 8. [`query_feasibility_analysis/README.md`](query_feasibility_analysis/README.md) — per-query feasibility (Q3 → Q1 → Q2 → Q4).
 9. [`docs/claims file analysis.md`](docs/claims%20file%20analysis.md) — sample-data analysis.
-10. [`docs/implementation-plan.md`](docs/implementation-plan.md) — phased roadmap.
 
 A few load-bearing decisions worth highlighting:
 

@@ -139,7 +139,7 @@ class AppointmentExtractionResponse(BaseModel):
 _SYSTEM_PROMPT = """You extract APPOINTMENT events from a workers'-comp claim note. In this system, an appointment is a MEDICAL encounter only — past, future, or missed — between the claimant and a healthcare provider. Workers'-comp claims also produce legal events (depositions, mediations, hearings, settlement conferences), administrative events (claim-acceptance meetings, adjuster reviews, employer RTW meetings), and vocational events (voc-rehab evaluations, ergonomic assessments). These are real dated events but they are OUT OF SCOPE for this extractor — do not emit them as appointments.
 
 STATUS:
-- attended  — the visit happened. A medical-record block (`Date of Appointment: X` followed by `Plan:` / clinical content) counts as attended even without an "attended" verb.
+- attended  — the visit happened. A medical-record block (`Date of Appointment: X` followed by clinical content) counts as attended even without an "attended" verb. "Clinical content" includes ANY of these section labels: `Plan:`, `Subjective:`, `Objective:`, `Assessment:`, `Assessment/Diagnosis:`, `Diagnosis:`, `Diagnosis & Assessment:`, `FCE Summary:`, `EMG/NCS report:`, `Interpretation:`, `Operative Note:`, `Therapeutic Exercise:`, `Discharge Summary:`, `Findings:`, `Impression:`, or any free-text paragraph describing what happened at the visit.
 - missed    — claimant did not attend / no-show / DNA / "unable to attend".
 - cancelled — cancelled or rescheduled before it could happen.
 - scheduled — a future appointment with a specific date.

@@ -5,12 +5,12 @@
   "rtw_date": "2025-11-10",
   "duty_type": "modified",
   "role": "scheduling coordinator",
-  "event_id": "85b71e5e-08e8-4c16-9997-263f0a410b99",
+  "event_id": "0fcd1302-8b03-46e1-ac60-7a98bd7764a6",
   "extraction_method": "merged",
   "evidence": [
     {
       "note_date": "2025-11-07",
-      "quote": "EE start date confirmed for 11/10/25."
+      "quote": "EE start date confirmed for 11/10/25"
     },
     {
       "note_date": "2025-11-21",
@@ -33,10 +33,12 @@
     {
       "date": "2025-01-03",
       "status": "attended",
-      "parties": [],
+      "parties": [
+        "Regional Medical Center"
+      ],
       "specialty": null,
       "appointment_type": null,
-      "event_id": "84be7a0c-0ce4-4e26-bd76-3910cd3aaecd",
+      "event_id": "bddbb54e-3915-4ef3-b2c9-0c535c24431e",
       "extraction_method": "merged",
       "evidence": [
         {
@@ -58,24 +60,20 @@
       ],
       "specialty": null,
       "appointment_type": null,
-      "event_id": "dd86c195-b3b4-4baa-b9ed-18108959bec0",
+      "event_id": "8636d8e2-60d2-4a8a-a57f-89ec21c4deb2",
       "extraction_method": "merged",
       "evidence": [
-        {
-          "note_date": "2025-02-01",
-          "quote": "Dr. Harmon agreed to assume care as treating provider; appointment scheduled 2-5-25 with FCM assigned to attend."
-        },
         {
           "note_date": "2025-02-01",
           "quote": "EE has appointment with Dr. Harmon on 2-5-25 with FCM assigned."
         },
         {
-          "note_date": "2025-02-06",
-          "quote": "As Dr. Ruiz is not in network, care was redirected to Dr. Harmon, who evaluated her on 2/5/25."
+          "note_date": "2025-02-01",
+          "quote": "appointment scheduled 2-5-25 with FCM assigned to attend"
         },
         {
           "note_date": "2025-02-06",
-          "quote": "The claimant was discharged from the hospital on 1/17/25 to Parkview Rehab Center, but then left the facility on 1/18/25 due to hygiene concerns. The claimant then returned home with the original treatment plan of completing physical therapy at home, 18 sessions were authorized. As Dr. Ruiz is not in network, the claimant was redirected to Dr. Harmon who agreed to assume treatment. The claimant was evaluated by Dr. Harmon on 2/5/25."
+          "quote": "As Dr. Ruiz is not in network, care was redirected to Dr. Harmon, who evaluated her on 2/5/25."
         },
         {
           "note_date": "2025-03-11",
@@ -84,6 +82,32 @@
         {
           "note_date": "2025-03-17",
           "quote": "EE attended appointment with Dr. Harmon on 2-5-25."
+        },
+        {
+          "note_date": "2025-08-09",
+          "quote": "An appointment was scheduled for 2-5-25."
+        },
+        {
+          "note_date": "2025-08-09",
+          "quote": "EE attended her appointment with Dr. Harmon on 2-5-25."
+        }
+      ]
+    },
+    {
+      "date": "2025-02-05",
+      "status": "attended",
+      "parties": [
+        "Parkview Rehab Center",
+        "Ruiz"
+      ],
+      "specialty": null,
+      "appointment_type": null,
+      "event_id": "2a614b20-9fa9-4a11-8897-8472627fa15c",
+      "extraction_method": "merged",
+      "evidence": [
+        {
+          "note_date": "2025-02-06",
+          "quote": "The claimant was discharged from the hospital on 1/17/25 to Parkview Rehab Center, but then left the facility on 1/18/25 due to hygiene concerns. The claimant then returned home with the original treatment plan of completing physical therapy at home, 18 sessions were authorized. As Dr. Ruiz is not in network, the claimant was redirected to Dr. Harmon who agreed to assume treatment. The claimant was evaluated by Dr. Harmon on 2/5/25."
         }
       ]
     },
@@ -95,7 +119,7 @@
       ],
       "specialty": null,
       "appointment_type": null,
-      "event_id": "52a70900-6636-49ea-af5e-42e19dc25805",
+      "event_id": "22cb7aab-6e2f-4891-935a-e17ec77f4cc0",
       "extraction_method": "merged",
       "evidence": [
         {
@@ -124,13 +148,9 @@
       ],
       "specialty": null,
       "appointment_type": null,
-      "event_id": "a6a201cc-8916-49c8-a4d7-6e6eb8630ac4",
+      "event_id": "387ede23-825d-465a-a2f5-5a7551852c52",
       "extraction_method": "merged",
       "evidence": [
-        {
-          "note_date": "2025-02-06",
-          "quote": "Claimant will follow up with Dr. Harmon in 4 weeks."
-        },
         {
           "note_date": "2025-02-27",
           "quote": "Dr. Harmon (Spine): 3-6-25"
@@ -141,7 +161,7 @@
         },
         {
           "note_date": "2025-03-05",
-          "quote": "I traveled to Dr. Harmon's office today, March 6th with Patient A."
+          "quote": "I traveled to Dr. Harmon's office today, March 6th with Patient A. She presented in a wheelchair accompanied by her friend. She has neck and low back pain — low back 8/10, neck minimal. Attending home PT twice a week. Dr. Harmon reviewed diagnostic imaging disc from the hospital. He feels she needs to increase her exercises — home PT to three times per week, plus independent exercises at least twice a day. X-rays of the lumbar spine showed mild scoliosis, spine appears stable. He does not recommend prescription pain medication. FCE that Dr. Vega ordered should be placed on hold. He is recommending continuation of PT, MRI of the cervical spine with contrast, and follow-up in four weeks. She is to remain out of work."
         },
         {
           "note_date": "2025-03-17",
@@ -161,7 +181,7 @@
       ],
       "specialty": null,
       "appointment_type": null,
-      "event_id": "d7224746-3b50-4b51-9428-9284a6c61d43",
+      "event_id": "bf612376-24e1-40d1-8f2b-e053ded3aefe",
       "extraction_method": "merged",
       "evidence": [
         {
@@ -170,11 +190,15 @@
         },
         {
           "note_date": "2025-03-11",
+          "quote": "Dr. Sinclair, ophthalmology: 03/14/2025"
+        },
+        {
+          "note_date": "2025-03-11",
           "quote": "Ophthalmology with Dr. Sinclair scheduled 3-14-25."
         },
         {
           "note_date": "2025-03-12",
-          "quote": "She attended her ophthalmology appointment yesterday with our field nurse in attendance."
+          "quote": "She attended her ophthalmology appointment yesterday with our field nurse in attendance. She underwent a complete ocular examination and Dr. Sinclair opines there is no ocular cause for her headaches."
         },
         {
           "note_date": "2025-03-17",
@@ -194,7 +218,7 @@
       ],
       "specialty": null,
       "appointment_type": null,
-      "event_id": "153cd6b4-1edd-4824-b5bf-d8939caec4fd",
+      "event_id": "582c3b0d-4d68-4734-8ce2-8242e69ea3f7",
       "extraction_method": "merged",
       "evidence": [
         {
@@ -215,7 +239,7 @@
         },
         {
           "note_date": "2025-03-26",
-          "quote": "I traveled to Dr. Vega's office on March 28th to attend the scheduled follow-up appointment with Patient A."
+          "quote": "I traveled to Dr. Vega's office on March 28th to attend the scheduled follow-up appointment with Patient A. Patient A presented to the appointment in a wheelchair accompanied by her friend. She is still experiencing some dizziness, headaches, and blurry vision. She stated that she is doing home PT three times per week. I informed Dr. Vega that the FCE was not done because Dr. Harmon placed it on hold. I also informed Dr. Vega that she attended the ophthalmology evaluation with Dr. Sinclair who released her to full-duty work and deemed her visual symptoms to be pre-existing. On exam, there is noted right leg weakness still and she reported some numbness. Dr. Vega is recommending she follow-up once the FCE is completed. She is not at MMI. She is to remain out of work. Attached is the work note."
         },
         {
           "note_date": "2025-03-26",
@@ -239,7 +263,7 @@
       ],
       "specialty": null,
       "appointment_type": null,
-      "event_id": "c1b05840-7416-41a5-b4da-9fd1a44de2cc",
+      "event_id": "26098c8c-af94-40be-9e20-75bc09ea37f9",
       "extraction_method": "merged",
       "evidence": [
         {
@@ -256,11 +280,7 @@
         },
         {
           "note_date": "2025-04-07",
-          "quote": "EE will need transportation to 4-11-25 appointment with Dr. Harmon"
-        },
-        {
-          "note_date": "2025-04-10",
-          "quote": "Date of Appointment: 4-11-25\nNext Office Visit: 5-16-25 at 11am\nName of physician: Dr. Harmon\nClinic: Orthopedic & Spine Associates"
+          "quote": "EE will need transportation to 4-11-25 appointment with Dr. Harmon."
         },
         {
           "note_date": "2025-04-10",
@@ -280,7 +300,7 @@
       ],
       "specialty": null,
       "appointment_type": null,
-      "event_id": "044ae1ea-2fc4-4eed-a1fb-f330ad7175be",
+      "event_id": "46ae82b4-6c7a-456d-b6d9-e25c4cf1dbe5",
       "extraction_method": "merged",
       "evidence": [
         {
@@ -302,6 +322,23 @@
       ]
     },
     {
+      "date": "2025-04-24",
+      "status": "attended",
+      "parties": [
+        "Valley PT Group"
+      ],
+      "specialty": null,
+      "appointment_type": null,
+      "event_id": "def4ae13-4954-4bdb-aa36-fb70304de13b",
+      "extraction_method": "merged",
+      "evidence": [
+        {
+          "note_date": "2025-05-08",
+          "quote": "Date of appointment: 4-24-25\nClinic: Valley PT Group\nSpecialty: Physical Therapy\n__\nSubjective: No new subjective comments from prior note.\nAssessment: Pt with good response to treatment. Pt able to complete all prescribed exercises without any adverse effects; however, requires adequate rest periods between sets. Pt will continue to benefit from skilled PT intervention."
+        }
+      ]
+    },
+    {
       "date": "2025-05-16",
       "status": "attended",
       "parties": [
@@ -309,7 +346,7 @@
       ],
       "specialty": null,
       "appointment_type": null,
-      "event_id": "5fb3bf79-1db6-48cb-913b-31a3dc2cd67a",
+      "event_id": "773730c1-b42e-46b2-8843-b4b976451e5d",
       "extraction_method": "merged",
       "evidence": [
         {
@@ -330,36 +367,15 @@
         },
         {
           "note_date": "2025-05-15",
-          "quote": "I traveled to Dr. Harmon's office today, May 16th to attend the scheduled follow-up appointment with Patient A."
+          "quote": "I traveled to Dr. Harmon's office today, May 16th to attend the scheduled follow-up appointment with Patient A. Patient A presented to the appointment in the wheelchair accompanied by her older son. She stated she is ambulating at home with the walker but uses the wheelchair for transportation. Neck pain is 6/10. She is taking acetaminophen and a medication a family member brought from her home country. On exam, there is good strength and mobility of the upper extremities but decreased mobility and strength of the lower extremities. Dr. Harmon explained that cord compression syndrome takes time to resolve and encouraged her to continue with PT and home exercises. He is recommending continuation of outpatient PT twice a week for four weeks. She is to remain out of work. She is scheduled to follow-up on 6-27-25 at 10:30 AM. Attached is the work note and PT script."
         },
         {
           "note_date": "2025-05-16",
-          "quote": "She attended her follow-up with Dr. Harmon. On exam, she had good strength and motion in her upper extremities, but her lower extremities remain weak. Dr. Harmon would like her to continue with PT."
+          "quote": "She attended her follow-up with Dr. Harmon. On exam, she had good strength and motion in her upper extremities, but her lower extremities remain weak. Dr. Harmon would like her to continue with PT. He again reiterated that this type of injury takes time to heal but wants her to work hard in therapy and with her home exercises. He is maintaining her out of work at this time. I have attached the note for your records."
         },
         {
           "note_date": "2025-06-16",
           "quote": "EE attended her appointment on 5-16-25 with Dr. Harmon."
-        },
-        {
-          "note_date": "2025-08-09",
-          "quote": "EE attended her appointment on 5-16-25 with Dr. Harmon."
-        }
-      ]
-    },
-    {
-      "date": "2025-05-16",
-      "status": "attended",
-      "parties": [
-        "Vega"
-      ],
-      "specialty": null,
-      "appointment_type": null,
-      "event_id": "5946101c-1367-4b3a-9b12-4a1161e0b03e",
-      "extraction_method": "merged",
-      "evidence": [
-        {
-          "note_date": "2025-08-09",
-          "quote": "She then attended a follow-up with Dr. Vega."
         }
       ]
     },
@@ -371,7 +387,7 @@
       ],
       "specialty": null,
       "appointment_type": null,
-      "event_id": "d1a2300d-ac82-4651-b576-4b677095187f",
+      "event_id": "82d37b9c-2309-43dc-af37-3f1c22c690e0",
       "extraction_method": "merged",
       "evidence": [
         {
@@ -392,12 +408,12 @@
       ],
       "specialty": null,
       "appointment_type": null,
-      "event_id": "e69c8ea2-ca9b-42ab-b5cc-32d72ba95a3b",
+      "event_id": "1f06f5ee-8a08-4596-ac01-cd08bc229766",
       "extraction_method": "merged",
       "evidence": [
         {
           "note_date": "2025-05-30",
-          "quote": "I traveled to Dr. Vega's office today, June 2nd to attend the scheduled follow-up appointment with Patient A."
+          "quote": "I traveled to Dr. Vega's office today, June 2nd to attend the scheduled follow-up appointment with Patient A. Patient A presented to the appointment in the wheelchair accompanied by her older son. She stated she has intermittent headaches and dizziness when exerting herself at PT. Pain is 5/10. On exam, her bilateral lower extremities are still weak. Dr. Vega feels that she has reached MMI from a neurological standpoint. He discharged her from his care and she should follow-up only if needed."
         }
       ]
     },
@@ -409,7 +425,7 @@
       ],
       "specialty": null,
       "appointment_type": null,
-      "event_id": "5dbcb119-1d1f-49d2-8d32-7e1ff01d8781",
+      "event_id": "2453ef76-2e2f-4fb2-8135-cfb8bc5b6737",
       "extraction_method": "merged",
       "evidence": [
         {
@@ -426,7 +442,7 @@
       ],
       "specialty": null,
       "appointment_type": null,
-      "event_id": "cc3af6d0-6f9c-47e0-bac7-d35eb49fb962",
+      "event_id": "77d5952e-8c1b-46cf-bcd2-a09048328e92",
       "extraction_method": "merged",
       "evidence": [
         {
@@ -439,12 +455,11 @@
       "date": "2025-06-23",
       "status": "attended",
       "parties": [
-        "Harmon",
-        "Valley PT Group"
+        "OCCM"
       ],
       "specialty": null,
       "appointment_type": null,
-      "event_id": "2ee6e8b7-7309-4081-92f3-015324049d66",
+      "event_id": "c96141c4-7c30-4250-90d6-01e5baa81b5d",
       "extraction_method": "merged",
       "evidence": [
         {
@@ -453,19 +468,11 @@
         },
         {
           "note_date": "2025-06-17",
-          "quote": "APPOINTMENT INFORMATION: DATE: 06/23/2025  TIME: 1:45 PM"
+          "quote": "EMG is scheduled: --REQUESTED STUDY: EMG/NCS BILATERAL LOWER EXTREMITIES APPOINTMENT INFORMATION: DATE: 06/23/2025  TIME: 1:45 PM"
         },
         {
           "note_date": "2025-06-25",
-          "quote": "Date of Appointment: 6-23-25\nProvider:\nSpecialty: Neurology\nEMG/NCS report:\nAt your request, on the 18th of June, 2025 I evaluated Patient A in my office for EMG and nerve conduction studies. Enclosed you will find a report form. As you can see, the study was normal. There is no objective evidence on today's examination of a radicular or neurogenic etiology contributing to the reported symptoms. The activation pattern observed on needle EMG is inconsistent with an upper motor neuron lesion. I continue to have concerns regarding an inorganic explanation for the ongoing neurologic disability."
-        },
-        {
-          "note_date": "2025-06-26",
-          "quote": "She attended her follow-up with Dr. Harmon."
-        },
-        {
-          "note_date": "2025-07-14",
-          "quote": "Date of Appointment: 6-26-25\nClinic: Valley PT Group\nSpecialty: Physical Therapy\nSubjective: Current Complaints / Gains: Pt continues c/o pain and tightness in neck and lower back area with bending and stair climbing. Pt reports PS 5-7/10 on LS and Rt LE. Pt reports PS 6-7/10 on CS and upper back area.\nAssessment: Pt tolerated treatment and therapeutic exercise well."
+          "quote": "Date of Appointment: 6-23-25\nProvider:\nSpecialty: Neurology\nEMG/NCS report:\nAt your request, on the 18th of June, 2025 I evaluated Patient A in my office for EMG and nerve conduction studies. Enclosed you will find a report form. As you can see, the study was normal. There is no objective evidence on today's examination of a radicular or neurogenic etiology contributing to the reported symptoms. The activation pattern observed on needle EMG is inconsistent with an upper motor neuron lesion. I continue to have concerns regarding an inorganic explanation for the ongoing neurologic disability.\nInterpretation: Normal study"
         },
         {
           "note_date": "2025-08-09",
@@ -474,14 +481,35 @@
       ]
     },
     {
-      "date": "2025-06-27",
+      "date": "2025-06-26",
+      "status": "attended",
+      "parties": [
+        "Valley PT Group"
+      ],
+      "specialty": null,
+      "appointment_type": null,
+      "event_id": "98e24141-e550-42a1-a486-4d55c115dd8f",
+      "extraction_method": "merged",
+      "evidence": [
+        {
+          "note_date": "2025-06-24",
+          "quote": "Claimant has a follow-up tomorrow 6-27-25 at 10:30am EST"
+        },
+        {
+          "note_date": "2025-07-14",
+          "quote": "Date of Appointment: 6-26-25\nClinic: Valley PT Group\nSpecialty: Physical Therapy\nSubjective: Current Complaints / Gains: Pt continues c/o pain and tightness in neck and lower back area with bending and stair climbing. Pt reports PS 5-7/10 on LS and Rt LE. Pt reports PS 6-7/10 on CS and upper back area.\nAssessment: Pt tolerated treatment and therapeutic exercise well."
+        }
+      ]
+    },
+    {
+      "date": "2025-06-26",
       "status": "attended",
       "parties": [
         "Harmon"
       ],
       "specialty": null,
       "appointment_type": null,
-      "event_id": "c6a39cc7-6c8a-46db-9181-b2be8dedcde0",
+      "event_id": "193a0279-e2f3-48f6-a751-7f5f270a279b",
       "extraction_method": "merged",
       "evidence": [
         {
@@ -501,12 +529,8 @@
           "quote": "Dr. Harmon (Spine) 6-27-25"
         },
         {
-          "note_date": "2025-06-24",
-          "quote": "Claimant has a follow-up tomorrow 6-27-25 at 10:30am EST."
-        },
-        {
           "note_date": "2025-06-26",
-          "quote": "Date of Appointment: 6-27-25\nNext Office Visit: 7-25-25 at 11am\nName of physician: Dr. Harmon\nClinic: Orthopedic & Spine Associates"
+          "quote": "She attended her follow-up with Dr. Harmon. She arrived at this appointment without a wheelchair and was ambulating with the assistance of a walker. Dr. Harmon feels she is progressing."
         },
         {
           "note_date": "2025-08-09",
@@ -522,7 +546,7 @@
       ],
       "specialty": null,
       "appointment_type": null,
-      "event_id": "9ca17aa6-7e5d-4e36-b3c1-98f5883c3ae2",
+      "event_id": "f13ab1d5-f741-42a8-a0a1-334f705853a0",
       "extraction_method": "merged",
       "evidence": [
         {
@@ -535,12 +559,11 @@
       "date": "2025-07-25",
       "status": "attended",
       "parties": [
-        "Harmon",
-        "Orthopedic & Spine Associates"
+        "Harmon"
       ],
       "specialty": null,
       "appointment_type": null,
-      "event_id": "c1156a48-8796-4e7e-863c-e4ed4afe9287",
+      "event_id": "ff2c3542-1089-47b0-98c6-1574cfc7bcbe",
       "extraction_method": "merged",
       "evidence": [
         {
@@ -553,11 +576,11 @@
         },
         {
           "note_date": "2025-07-24",
-          "quote": "Date of Appointment: 7-25-25\nNext Office Visit: 8-22-25 at 10am\nName of physician: Dr. Harmon\nClinic: Orthopedic & Spine Associates"
+          "quote": "She attended her follow-up with Dr. Harmon yesterday 7-25-25."
         },
         {
-          "note_date": "2025-07-24",
-          "quote": "She attended her follow-up with Dr. Harmon yesterday 7-25-25."
+          "note_date": "2025-07-25",
+          "quote": "A follow-up examination with Dr. Harmon occurred on 07/25/2025."
         },
         {
           "note_date": "2025-08-09",
@@ -569,35 +592,46 @@
       "date": "2025-08-20",
       "status": "attended",
       "parties": [
-        "Valley PT Group",
-        "Harmon",
-        "Orthopedic & Spine Associates"
+        "Harmon"
       ],
       "specialty": null,
       "appointment_type": null,
-      "event_id": "af24c7a3-5dd4-4b36-a338-4be1220d6272",
+      "event_id": "a2f8930a-0230-4459-9778-c98ea74d3337",
       "extraction_method": "merged",
       "evidence": [
-        {
-          "note_date": "2025-07-24",
-          "quote": "Date of Appointment: 7-25-25\nNext Office Visit: 8-22-25 at 10am\nName of physician: Dr. Harmon\nClinic: Orthopedic & Spine Associates"
-        },
         {
           "note_date": "2025-07-24",
           "quote": "Her next appointment is scheduled on 8-22-25 at 10am."
         },
         {
+          "note_date": "2025-07-24",
+          "quote": "Next Office Visit: 8-22-25 at 10am\nName of physician: Dr. Harmon\nClinic: Orthopedic & Spine Associates"
+        },
+        {
+          "note_date": "2025-07-25",
+          "quote": "NEXT APPOINTMENTS: 8-22-25\nDr. Harmon (Spine) — 8-22-25"
+        },
+        {
           "note_date": "2025-08-09",
-          "quote": "NEXT APPOINTMENTS: 8-22-25"
+          "quote": "NEXT APPOINTMENTS: 8-22-25 Dr. Harmon (Spine)"
         },
         {
           "note_date": "2025-08-21",
-          "quote": "Date of Appointment: 8-22-25\nNext Office Visit: 9-19-25\nName of physician: Dr. Harmon\nClinic: Orthopedic & Spine Associates\nSpecialty: Spine"
-        },
-        {
-          "note_date": "2025-08-21",
-          "quote": "She attended her scheduled follow-up yesterday."
-        },
+          "quote": "She attended her scheduled follow-up yesterday. Her progress continues to be gradual. She still relies on a walker but feels she can occasionally manage short distances without it. Her physical therapist has begun addressing this in treatment. Dr. Harmon has recommended she continue PT 2x per week."
+        }
+      ]
+    },
+    {
+      "date": "2025-08-21",
+      "status": "attended",
+      "parties": [
+        "Valley PT Group"
+      ],
+      "specialty": null,
+      "appointment_type": null,
+      "event_id": "28c54f6f-0ea8-46b5-b97a-1bbd18f495d2",
+      "extraction_method": "merged",
+      "evidence": [
         {
           "note_date": "2025-09-02",
           "quote": "Date of Appointment: 8-21-25\nClinic: Valley PT Group\nSpecialty: Physical Therapy\nCurrent Complaints / Gains: Pt has difficulty with sit to stand, ambulating with rollator. Pt reports improvement in cervical flexibility.\nObjective: Bilateral trapezius stretching - 10x1, 10 sec hold\nCervical retraction ex's - 10x2\nStability ball rolling on floor - 5'\nShoulder elevation - #2 DB - 10x2\nActive cervical ROM - 10x2 each direction\nUpper trap self-stretching bilateral - 10x1, 10 sec hold\nGrip strengthening 10x2\nClamshell with resistance band -10x2\nSupine straight leg raise using strap -10x1\nSupine double knee to chest with therapy ball - 10x1\nSupine bridge ex's - 10x1\nStationary marching - 10x2\nBilateral heel raises - 10x2\nLateral weight shifting activities - 10x2\nAssessment/Diagnosis: Pt tolerated treatment well."
@@ -612,7 +646,7 @@
       ],
       "specialty": null,
       "appointment_type": null,
-      "event_id": "8e5d9471-ecdf-4f12-a8c1-0e33fb2df13f",
+      "event_id": "7ff6ae81-4912-4c33-b451-d6fc0b7d0bc5",
       "extraction_method": "merged",
       "evidence": [
         {
@@ -621,7 +655,7 @@
         },
         {
           "note_date": "2025-10-17",
-          "quote": "Date of Appointment: 10-14-25\nProvider: Bridge Functional Capacity Evaluators\nSpecialty: Occupational Therapy / FCE\nFCE Summary: Patient A was evaluated over a 4-hour period on 10/14/2025."
+          "quote": "Date of Appointment: 10-14-25\nProvider: Bridge Functional Capacity Evaluators\nSpecialty: Occupational Therapy / FCE\nFCE Summary: Patient A was evaluated over a 4-hour period on 10/14/2025. Validity testing indicated a reliable effort. Results indicate the claimant is capable of sedentary to light-duty work. She is able to sit for up to 30 minutes at a time and stand briefly with assistive device. No lifting greater than 10 lbs from floor to waist. She requires bilateral AFOs for ambulation and a rollator for distances greater than approximately 50 feet. She demonstrated residual deficits in bilateral lower extremity strength and coordination consistent with her diagnosed cord syndrome. She is not capable of returning to her prior distribution/warehouse role."
         }
       ]
     },
@@ -633,7 +667,7 @@
       ],
       "specialty": null,
       "appointment_type": null,
-      "event_id": "fd893980-ec5a-4a34-8f9f-54dbccc7bc5a",
+      "event_id": "b1978b01-2745-4718-91ed-4da04fd0cc81",
       "extraction_method": "merged",
       "evidence": [
         {
@@ -646,18 +680,13 @@
       "date": "2025-11-14",
       "status": "attended",
       "parties": [
-        "Harmon",
-        "Orthopedic & Spine Associates"
+        "Harmon"
       ],
       "specialty": null,
       "appointment_type": null,
-      "event_id": "a9095f7c-4b8c-4d0e-81b7-41059a3e15ea",
+      "event_id": "be16f5df-1f72-4ca8-9944-fdc0e7ba98a5",
       "extraction_method": "merged",
       "evidence": [
-        {
-          "note_date": "2025-09-19",
-          "quote": "Next Office Visit: 11-14-25\nName of physician: Dr. Harmon\nClinic: Orthopedic & Spine Associates"
-        },
         {
           "note_date": "2025-10-29",
           "quote": "Her next appointment with Dr. Harmon is scheduled for 11-14-25."
@@ -669,7 +698,7 @@
       ]
     }
   ],
-  "count": 22
+  "count": 25
 }
 
 === q3 ===
@@ -686,7 +715,7 @@
           "previous_amount": "0",
           "delta": "1023.00",
           "author": "Claims Adapter",
-          "event_id": "a6fe64f5-49a8-4342-abc0-2b9dbb159ed6",
+          "event_id": "6949e1c5-4c98-4d7f-a99f-614d9eea7439",
           "extraction_method": "rule",
           "evidence": [
             {
@@ -701,7 +730,7 @@
           "previous_amount": "1023.00",
           "delta": "-651.75",
           "author": "Claims Adapter",
-          "event_id": "afd89d79-ee0f-4d61-8f39-7c1d5e6827b7",
+          "event_id": "092d44e2-f2d8-4317-b261-829d8834970d",
           "extraction_method": "rule",
           "evidence": [
             {
@@ -716,7 +745,7 @@
           "previous_amount": "371.25",
           "delta": "-223.00",
           "author": "Claims Adapter",
-          "event_id": "31d9749a-0003-4ed7-aed7-1de4c04a3f2b",
+          "event_id": "f4bf2704-12dc-462f-b402-c33e04e4e2ca",
           "extraction_method": "rule",
           "evidence": [
             {
@@ -738,7 +767,7 @@
           "previous_amount": "0",
           "delta": "10000.00",
           "author": "M.H.",
-          "event_id": "0015b54c-6c6f-4069-a0a7-68682bc968da",
+          "event_id": "230f4cd2-dc63-408b-9a93-bd4b9390e986",
           "extraction_method": "rule",
           "evidence": [
             {
@@ -753,7 +782,7 @@
           "previous_amount": "10000.00",
           "delta": "428600.00",
           "author": "M.H.",
-          "event_id": "03bec4a2-54ab-450b-928e-f13f3b9b726e",
+          "event_id": "2b59f639-fd60-48f8-b53b-c61dbf03a0aa",
           "extraction_method": "rule",
           "evidence": [
             {
@@ -768,7 +797,7 @@
           "previous_amount": "438600.00",
           "delta": "-55756.00",
           "author": "M.H.",
-          "event_id": "47066dc6-794c-4fe8-a07c-1e647c7a6515",
+          "event_id": "d66abe61-ff98-4536-8a7e-77ef4b580108",
           "extraction_method": "rule",
           "evidence": [
             {
@@ -790,7 +819,7 @@
           "previous_amount": "0",
           "delta": "10000.00",
           "author": "M.H.",
-          "event_id": "eeecfcad-1877-49c2-8ad8-d19ec58a96b7",
+          "event_id": "25eb45a4-0943-416e-893b-259272dd7630",
           "extraction_method": "rule",
           "evidence": [
             {
@@ -805,7 +834,7 @@
           "previous_amount": "10000.00",
           "delta": "227257.44",
           "author": "M.H.",
-          "event_id": "2882601b-389b-4bc2-823f-f2f491a26ccd",
+          "event_id": "55297d32-e864-4645-a431-11c95a9b1198",
           "extraction_method": "rule",
           "evidence": [
             {
@@ -820,7 +849,7 @@
           "previous_amount": "237257.44",
           "delta": "83756.56",
           "author": "M.H.",
-          "event_id": "27c3f73e-bbe9-4a61-a447-4e8eb0d2a2ae",
+          "event_id": "318a1374-4e77-4355-a1a9-bdd4bc64731c",
           "extraction_method": "rule",
           "evidence": [
             {
@@ -847,24 +876,20 @@
       "occurred_on": "2025-02-05",
       "lag_days": 4,
       "on_time_delta_days": 0,
-      "event_id": "dd86c195-b3b4-4baa-b9ed-18108959bec0",
+      "event_id": "8636d8e2-60d2-4a8a-a57f-89ec21c4deb2",
       "extraction_method": "merged",
       "evidence": [
-        {
-          "note_date": "2025-02-01",
-          "quote": "Dr. Harmon agreed to assume care as treating provider; appointment scheduled 2-5-25 with FCM assigned to attend."
-        },
         {
           "note_date": "2025-02-01",
           "quote": "EE has appointment with Dr. Harmon on 2-5-25 with FCM assigned."
         },
         {
-          "note_date": "2025-02-06",
-          "quote": "As Dr. Ruiz is not in network, care was redirected to Dr. Harmon, who evaluated her on 2/5/25."
+          "note_date": "2025-02-01",
+          "quote": "appointment scheduled 2-5-25 with FCM assigned to attend"
         },
         {
           "note_date": "2025-02-06",
-          "quote": "The claimant was discharged from the hospital on 1/17/25 to Parkview Rehab Center, but then left the facility on 1/18/25 due to hygiene concerns. The claimant then returned home with the original treatment plan of completing physical therapy at home, 18 sessions were authorized. As Dr. Ruiz is not in network, the claimant was redirected to Dr. Harmon who agreed to assume treatment. The claimant was evaluated by Dr. Harmon on 2/5/25."
+          "quote": "As Dr. Ruiz is not in network, care was redirected to Dr. Harmon, who evaluated her on 2/5/25."
         },
         {
           "note_date": "2025-03-11",
@@ -873,44 +898,14 @@
         {
           "note_date": "2025-03-17",
           "quote": "EE attended appointment with Dr. Harmon on 2-5-25."
-        }
-      ]
-    },
-    {
-      "parties": [
-        "Harmon"
-      ],
-      "scheduled_notice_date": "2025-02-06",
-      "scheduled_for_date": "2025-03-06",
-      "occurred_on": "2025-03-06",
-      "lag_days": 28,
-      "on_time_delta_days": 0,
-      "event_id": "a6a201cc-8916-49c8-a4d7-6e6eb8630ac4",
-      "extraction_method": "merged",
-      "evidence": [
-        {
-          "note_date": "2025-02-06",
-          "quote": "Claimant will follow up with Dr. Harmon in 4 weeks."
-        },
-        {
-          "note_date": "2025-02-27",
-          "quote": "Dr. Harmon (Spine): 3-6-25"
-        },
-        {
-          "note_date": "2025-03-05",
-          "quote": "DOS: 03/06/2025\nI had the pleasure of seeing Patient A in the office."
-        },
-        {
-          "note_date": "2025-03-05",
-          "quote": "I traveled to Dr. Harmon's office today, March 6th with Patient A."
-        },
-        {
-          "note_date": "2025-03-17",
-          "quote": "Dr. Harmon deferred FCE on 3-6-25 as premature; home PT increased to 3x/week."
         },
         {
           "note_date": "2025-08-09",
-          "quote": "EE attended her appointment with Dr. Harmon on 3-6-25."
+          "quote": "An appointment was scheduled for 2-5-25."
+        },
+        {
+          "note_date": "2025-08-09",
+          "quote": "EE attended her appointment with Dr. Harmon on 2-5-25."
         }
       ]
     },
@@ -923,7 +918,7 @@
       "occurred_on": "2025-02-28",
       "lag_days": 1,
       "on_time_delta_days": 0,
-      "event_id": "52a70900-6636-49ea-af5e-42e19dc25805",
+      "event_id": "22cb7aab-6e2f-4891-935a-e17ec77f4cc0",
       "extraction_method": "merged",
       "evidence": [
         {
@@ -946,6 +941,40 @@
     },
     {
       "parties": [
+        "Harmon"
+      ],
+      "scheduled_notice_date": "2025-02-27",
+      "scheduled_for_date": "2025-03-06",
+      "occurred_on": "2025-03-06",
+      "lag_days": 7,
+      "on_time_delta_days": 0,
+      "event_id": "387ede23-825d-465a-a2f5-5a7551852c52",
+      "extraction_method": "merged",
+      "evidence": [
+        {
+          "note_date": "2025-02-27",
+          "quote": "Dr. Harmon (Spine): 3-6-25"
+        },
+        {
+          "note_date": "2025-03-05",
+          "quote": "DOS: 03/06/2025\nI had the pleasure of seeing Patient A in the office."
+        },
+        {
+          "note_date": "2025-03-05",
+          "quote": "I traveled to Dr. Harmon's office today, March 6th with Patient A. She presented in a wheelchair accompanied by her friend. She has neck and low back pain — low back 8/10, neck minimal. Attending home PT twice a week. Dr. Harmon reviewed diagnostic imaging disc from the hospital. He feels she needs to increase her exercises — home PT to three times per week, plus independent exercises at least twice a day. X-rays of the lumbar spine showed mild scoliosis, spine appears stable. He does not recommend prescription pain medication. FCE that Dr. Vega ordered should be placed on hold. He is recommending continuation of PT, MRI of the cervical spine with contrast, and follow-up in four weeks. She is to remain out of work."
+        },
+        {
+          "note_date": "2025-03-17",
+          "quote": "Dr. Harmon deferred FCE on 3-6-25 as premature; home PT increased to 3x/week."
+        },
+        {
+          "note_date": "2025-08-09",
+          "quote": "EE attended her appointment with Dr. Harmon on 3-6-25."
+        }
+      ]
+    },
+    {
+      "parties": [
         "Vega"
       ],
       "scheduled_notice_date": "2025-02-27",
@@ -953,7 +982,7 @@
       "occurred_on": "2025-03-28",
       "lag_days": 29,
       "on_time_delta_days": 0,
-      "event_id": "153cd6b4-1edd-4824-b5bf-d8939caec4fd",
+      "event_id": "582c3b0d-4d68-4734-8ce2-8242e69ea3f7",
       "extraction_method": "merged",
       "evidence": [
         {
@@ -974,7 +1003,7 @@
         },
         {
           "note_date": "2025-03-26",
-          "quote": "I traveled to Dr. Vega's office on March 28th to attend the scheduled follow-up appointment with Patient A."
+          "quote": "I traveled to Dr. Vega's office on March 28th to attend the scheduled follow-up appointment with Patient A. Patient A presented to the appointment in a wheelchair accompanied by her friend. She is still experiencing some dizziness, headaches, and blurry vision. She stated that she is doing home PT three times per week. I informed Dr. Vega that the FCE was not done because Dr. Harmon placed it on hold. I also informed Dr. Vega that she attended the ophthalmology evaluation with Dr. Sinclair who released her to full-duty work and deemed her visual symptoms to be pre-existing. On exam, there is noted right leg weakness still and she reported some numbness. Dr. Vega is recommending she follow-up once the FCE is completed. She is not at MMI. She is to remain out of work. Attached is the work note."
         },
         {
           "note_date": "2025-03-26",
@@ -999,7 +1028,7 @@
       "occurred_on": "2025-03-14",
       "lag_days": 9,
       "on_time_delta_days": 0,
-      "event_id": "d7224746-3b50-4b51-9428-9284a6c61d43",
+      "event_id": "bf612376-24e1-40d1-8f2b-e053ded3aefe",
       "extraction_method": "merged",
       "evidence": [
         {
@@ -1008,11 +1037,15 @@
         },
         {
           "note_date": "2025-03-11",
+          "quote": "Dr. Sinclair, ophthalmology: 03/14/2025"
+        },
+        {
+          "note_date": "2025-03-11",
           "quote": "Ophthalmology with Dr. Sinclair scheduled 3-14-25."
         },
         {
           "note_date": "2025-03-12",
-          "quote": "She attended her ophthalmology appointment yesterday with our field nurse in attendance."
+          "quote": "She attended her ophthalmology appointment yesterday with our field nurse in attendance. She underwent a complete ocular examination and Dr. Sinclair opines there is no ocular cause for her headaches."
         },
         {
           "note_date": "2025-03-17",
@@ -1033,7 +1066,7 @@
       "occurred_on": "2025-04-11",
       "lag_days": 30,
       "on_time_delta_days": 0,
-      "event_id": "c1b05840-7416-41a5-b4da-9fd1a44de2cc",
+      "event_id": "26098c8c-af94-40be-9e20-75bc09ea37f9",
       "extraction_method": "merged",
       "evidence": [
         {
@@ -1050,11 +1083,7 @@
         },
         {
           "note_date": "2025-04-07",
-          "quote": "EE will need transportation to 4-11-25 appointment with Dr. Harmon"
-        },
-        {
-          "note_date": "2025-04-10",
-          "quote": "Date of Appointment: 4-11-25\nNext Office Visit: 5-16-25 at 11am\nName of physician: Dr. Harmon\nClinic: Orthopedic & Spine Associates"
+          "quote": "EE will need transportation to 4-11-25 appointment with Dr. Harmon."
         },
         {
           "note_date": "2025-04-10",
@@ -1075,7 +1104,7 @@
       "occurred_on": "2025-05-16",
       "lag_days": 36,
       "on_time_delta_days": 0,
-      "event_id": "5fb3bf79-1db6-48cb-913b-31a3dc2cd67a",
+      "event_id": "773730c1-b42e-46b2-8843-b4b976451e5d",
       "extraction_method": "merged",
       "evidence": [
         {
@@ -1096,18 +1125,14 @@
         },
         {
           "note_date": "2025-05-15",
-          "quote": "I traveled to Dr. Harmon's office today, May 16th to attend the scheduled follow-up appointment with Patient A."
+          "quote": "I traveled to Dr. Harmon's office today, May 16th to attend the scheduled follow-up appointment with Patient A. Patient A presented to the appointment in the wheelchair accompanied by her older son. She stated she is ambulating at home with the walker but uses the wheelchair for transportation. Neck pain is 6/10. She is taking acetaminophen and a medication a family member brought from her home country. On exam, there is good strength and mobility of the upper extremities but decreased mobility and strength of the lower extremities. Dr. Harmon explained that cord compression syndrome takes time to resolve and encouraged her to continue with PT and home exercises. He is recommending continuation of outpatient PT twice a week for four weeks. She is to remain out of work. She is scheduled to follow-up on 6-27-25 at 10:30 AM. Attached is the work note and PT script."
         },
         {
           "note_date": "2025-05-16",
-          "quote": "She attended her follow-up with Dr. Harmon. On exam, she had good strength and motion in her upper extremities, but her lower extremities remain weak. Dr. Harmon would like her to continue with PT."
+          "quote": "She attended her follow-up with Dr. Harmon. On exam, she had good strength and motion in her upper extremities, but her lower extremities remain weak. Dr. Harmon would like her to continue with PT. He again reiterated that this type of injury takes time to heal but wants her to work hard in therapy and with her home exercises. He is maintaining her out of work at this time. I have attached the note for your records."
         },
         {
           "note_date": "2025-06-16",
-          "quote": "EE attended her appointment on 5-16-25 with Dr. Harmon."
-        },
-        {
-          "note_date": "2025-08-09",
           "quote": "EE attended her appointment on 5-16-25 with Dr. Harmon."
         }
       ]
@@ -1121,7 +1146,7 @@
       "occurred_on": "2025-04-17",
       "lag_days": 3,
       "on_time_delta_days": 0,
-      "event_id": "044ae1ea-2fc4-4eed-a1fb-f330ad7175be",
+      "event_id": "46ae82b4-6c7a-456d-b6d9-e25c4cf1dbe5",
       "extraction_method": "merged",
       "evidence": [
         {
@@ -1151,7 +1176,7 @@
       "occurred_on": "2025-05-29",
       "lag_days": 23,
       "on_time_delta_days": 0,
-      "event_id": "d1a2300d-ac82-4651-b576-4b677095187f",
+      "event_id": "82d37b9c-2309-43dc-af37-3f1c22c690e0",
       "extraction_method": "merged",
       "evidence": [
         {
@@ -1169,11 +1194,11 @@
         "Harmon"
       ],
       "scheduled_notice_date": "2025-05-15",
-      "scheduled_for_date": "2025-06-27",
-      "occurred_on": "2025-06-27",
-      "lag_days": 43,
+      "scheduled_for_date": "2025-06-26",
+      "occurred_on": "2025-06-26",
+      "lag_days": 42,
       "on_time_delta_days": 0,
-      "event_id": "c6a39cc7-6c8a-46db-9181-b2be8dedcde0",
+      "event_id": "193a0279-e2f3-48f6-a751-7f5f270a279b",
       "extraction_method": "merged",
       "evidence": [
         {
@@ -1193,12 +1218,8 @@
           "quote": "Dr. Harmon (Spine) 6-27-25"
         },
         {
-          "note_date": "2025-06-24",
-          "quote": "Claimant has a follow-up tomorrow 6-27-25 at 10:30am EST."
-        },
-        {
           "note_date": "2025-06-26",
-          "quote": "Date of Appointment: 6-27-25\nNext Office Visit: 7-25-25 at 11am\nName of physician: Dr. Harmon\nClinic: Orthopedic & Spine Associates"
+          "quote": "She attended her follow-up with Dr. Harmon. She arrived at this appointment without a wheelchair and was ambulating with the assistance of a walker. Dr. Harmon feels she is progressing."
         },
         {
           "note_date": "2025-08-09",
@@ -1215,26 +1236,25 @@
       "occurred_on": "2025-06-02",
       "lag_days": 3,
       "on_time_delta_days": 0,
-      "event_id": "e69c8ea2-ca9b-42ab-b5cc-32d72ba95a3b",
+      "event_id": "1f06f5ee-8a08-4596-ac01-cd08bc229766",
       "extraction_method": "merged",
       "evidence": [
         {
           "note_date": "2025-05-30",
-          "quote": "I traveled to Dr. Vega's office today, June 2nd to attend the scheduled follow-up appointment with Patient A."
+          "quote": "I traveled to Dr. Vega's office today, June 2nd to attend the scheduled follow-up appointment with Patient A. Patient A presented to the appointment in the wheelchair accompanied by her older son. She stated she has intermittent headaches and dizziness when exerting herself at PT. Pain is 5/10. On exam, her bilateral lower extremities are still weak. Dr. Vega feels that she has reached MMI from a neurological standpoint. He discharged her from his care and she should follow-up only if needed."
         }
       ]
     },
     {
       "parties": [
-        "Harmon",
-        "Valley PT Group"
+        "OCCM"
       ],
       "scheduled_notice_date": "2025-06-16",
       "scheduled_for_date": "2025-06-23",
       "occurred_on": "2025-06-23",
       "lag_days": 7,
       "on_time_delta_days": 0,
-      "event_id": "2ee6e8b7-7309-4081-92f3-015324049d66",
+      "event_id": "c96141c4-7c30-4250-90d6-01e5baa81b5d",
       "extraction_method": "merged",
       "evidence": [
         {
@@ -1243,19 +1263,11 @@
         },
         {
           "note_date": "2025-06-17",
-          "quote": "APPOINTMENT INFORMATION: DATE: 06/23/2025  TIME: 1:45 PM"
+          "quote": "EMG is scheduled: --REQUESTED STUDY: EMG/NCS BILATERAL LOWER EXTREMITIES APPOINTMENT INFORMATION: DATE: 06/23/2025  TIME: 1:45 PM"
         },
         {
           "note_date": "2025-06-25",
-          "quote": "Date of Appointment: 6-23-25\nProvider:\nSpecialty: Neurology\nEMG/NCS report:\nAt your request, on the 18th of June, 2025 I evaluated Patient A in my office for EMG and nerve conduction studies. Enclosed you will find a report form. As you can see, the study was normal. There is no objective evidence on today's examination of a radicular or neurogenic etiology contributing to the reported symptoms. The activation pattern observed on needle EMG is inconsistent with an upper motor neuron lesion. I continue to have concerns regarding an inorganic explanation for the ongoing neurologic disability."
-        },
-        {
-          "note_date": "2025-06-26",
-          "quote": "She attended her follow-up with Dr. Harmon."
-        },
-        {
-          "note_date": "2025-07-14",
-          "quote": "Date of Appointment: 6-26-25\nClinic: Valley PT Group\nSpecialty: Physical Therapy\nSubjective: Current Complaints / Gains: Pt continues c/o pain and tightness in neck and lower back area with bending and stair climbing. Pt reports PS 5-7/10 on LS and Rt LE. Pt reports PS 6-7/10 on CS and upper back area.\nAssessment: Pt tolerated treatment and therapeutic exercise well."
+          "quote": "Date of Appointment: 6-23-25\nProvider:\nSpecialty: Neurology\nEMG/NCS report:\nAt your request, on the 18th of June, 2025 I evaluated Patient A in my office for EMG and nerve conduction studies. Enclosed you will find a report form. As you can see, the study was normal. There is no objective evidence on today's examination of a radicular or neurogenic etiology contributing to the reported symptoms. The activation pattern observed on needle EMG is inconsistent with an upper motor neuron lesion. I continue to have concerns regarding an inorganic explanation for the ongoing neurologic disability.\nInterpretation: Normal study"
         },
         {
           "note_date": "2025-08-09",
@@ -1265,15 +1277,36 @@
     },
     {
       "parties": [
-        "Harmon",
-        "Orthopedic & Spine Associates"
+        "Valley PT Group"
+      ],
+      "scheduled_notice_date": "2025-06-24",
+      "scheduled_for_date": "2025-06-26",
+      "occurred_on": "2025-06-26",
+      "lag_days": 2,
+      "on_time_delta_days": 0,
+      "event_id": "98e24141-e550-42a1-a486-4d55c115dd8f",
+      "extraction_method": "merged",
+      "evidence": [
+        {
+          "note_date": "2025-06-24",
+          "quote": "Claimant has a follow-up tomorrow 6-27-25 at 10:30am EST"
+        },
+        {
+          "note_date": "2025-07-14",
+          "quote": "Date of Appointment: 6-26-25\nClinic: Valley PT Group\nSpecialty: Physical Therapy\nSubjective: Current Complaints / Gains: Pt continues c/o pain and tightness in neck and lower back area with bending and stair climbing. Pt reports PS 5-7/10 on LS and Rt LE. Pt reports PS 6-7/10 on CS and upper back area.\nAssessment: Pt tolerated treatment and therapeutic exercise well."
+        }
+      ]
+    },
+    {
+      "parties": [
+        "Harmon"
       ],
       "scheduled_notice_date": "2025-06-26",
       "scheduled_for_date": "2025-07-25",
       "occurred_on": "2025-07-25",
       "lag_days": 29,
       "on_time_delta_days": 0,
-      "event_id": "c1156a48-8796-4e7e-863c-e4ed4afe9287",
+      "event_id": "ff2c3542-1089-47b0-98c6-1574cfc7bcbe",
       "extraction_method": "merged",
       "evidence": [
         {
@@ -1286,11 +1319,11 @@
         },
         {
           "note_date": "2025-07-24",
-          "quote": "Date of Appointment: 7-25-25\nNext Office Visit: 8-22-25 at 10am\nName of physician: Dr. Harmon\nClinic: Orthopedic & Spine Associates"
+          "quote": "She attended her follow-up with Dr. Harmon yesterday 7-25-25."
         },
         {
-          "note_date": "2025-07-24",
-          "quote": "She attended her follow-up with Dr. Harmon yesterday 7-25-25."
+          "note_date": "2025-07-25",
+          "quote": "A follow-up examination with Dr. Harmon occurred on 07/25/2025."
         },
         {
           "note_date": "2025-08-09",
@@ -1300,68 +1333,35 @@
     },
     {
       "parties": [
-        "Valley PT Group",
-        "Harmon",
-        "Orthopedic & Spine Associates"
+        "Harmon"
       ],
       "scheduled_notice_date": "2025-07-24",
       "scheduled_for_date": "2025-08-20",
       "occurred_on": "2025-08-20",
       "lag_days": 27,
       "on_time_delta_days": 0,
-      "event_id": "af24c7a3-5dd4-4b36-a338-4be1220d6272",
+      "event_id": "a2f8930a-0230-4459-9778-c98ea74d3337",
       "extraction_method": "merged",
       "evidence": [
-        {
-          "note_date": "2025-07-24",
-          "quote": "Date of Appointment: 7-25-25\nNext Office Visit: 8-22-25 at 10am\nName of physician: Dr. Harmon\nClinic: Orthopedic & Spine Associates"
-        },
         {
           "note_date": "2025-07-24",
           "quote": "Her next appointment is scheduled on 8-22-25 at 10am."
         },
         {
+          "note_date": "2025-07-24",
+          "quote": "Next Office Visit: 8-22-25 at 10am\nName of physician: Dr. Harmon\nClinic: Orthopedic & Spine Associates"
+        },
+        {
+          "note_date": "2025-07-25",
+          "quote": "NEXT APPOINTMENTS: 8-22-25\nDr. Harmon (Spine) — 8-22-25"
+        },
+        {
           "note_date": "2025-08-09",
-          "quote": "NEXT APPOINTMENTS: 8-22-25"
+          "quote": "NEXT APPOINTMENTS: 8-22-25 Dr. Harmon (Spine)"
         },
         {
           "note_date": "2025-08-21",
-          "quote": "Date of Appointment: 8-22-25\nNext Office Visit: 9-19-25\nName of physician: Dr. Harmon\nClinic: Orthopedic & Spine Associates\nSpecialty: Spine"
-        },
-        {
-          "note_date": "2025-08-21",
-          "quote": "She attended her scheduled follow-up yesterday."
-        },
-        {
-          "note_date": "2025-09-02",
-          "quote": "Date of Appointment: 8-21-25\nClinic: Valley PT Group\nSpecialty: Physical Therapy\nCurrent Complaints / Gains: Pt has difficulty with sit to stand, ambulating with rollator. Pt reports improvement in cervical flexibility.\nObjective: Bilateral trapezius stretching - 10x1, 10 sec hold\nCervical retraction ex's - 10x2\nStability ball rolling on floor - 5'\nShoulder elevation - #2 DB - 10x2\nActive cervical ROM - 10x2 each direction\nUpper trap self-stretching bilateral - 10x1, 10 sec hold\nGrip strengthening 10x2\nClamshell with resistance band -10x2\nSupine straight leg raise using strap -10x1\nSupine double knee to chest with therapy ball - 10x1\nSupine bridge ex's - 10x1\nStationary marching - 10x2\nBilateral heel raises - 10x2\nLateral weight shifting activities - 10x2\nAssessment/Diagnosis: Pt tolerated treatment well."
-        }
-      ]
-    },
-    {
-      "parties": [
-        "Harmon",
-        "Orthopedic & Spine Associates"
-      ],
-      "scheduled_notice_date": "2025-09-19",
-      "scheduled_for_date": "2025-11-14",
-      "occurred_on": "2025-11-14",
-      "lag_days": 56,
-      "on_time_delta_days": 0,
-      "event_id": "a9095f7c-4b8c-4d0e-81b7-41059a3e15ea",
-      "extraction_method": "merged",
-      "evidence": [
-        {
-          "note_date": "2025-09-19",
-          "quote": "Next Office Visit: 11-14-25\nName of physician: Dr. Harmon\nClinic: Orthopedic & Spine Associates"
-        },
-        {
-          "note_date": "2025-10-29",
-          "quote": "Her next appointment with Dr. Harmon is scheduled for 11-14-25."
-        },
-        {
-          "note_date": "2025-11-14",
-          "quote": "Date of Appointment: 11-14-25\nNext Office Visit: PRN\nName of physician: Dr. Harmon\nClinic: Orthopedic & Spine Associates\nSpecialty: Spine\nDiagnosis & Assessment: Anterior cord syndrome predominating over central cord syndrome at C4-5 and C5-6, s/p ACDF at Regional Medical Center. She has made meaningful gains over the course of this year. She is ambulating with a cane for short indoor distances and continues to use the rollator outdoors. Bilateral AFOs remain in use.\nPlan: She has reached a plateau in her neurological recovery consistent with the natural history of cord compression syndrome. I am placing her at maximum medical improvement effective today. She may continue her home exercise program independently. Follow-up on a PRN basis for acute flares. She is released to sedentary modified duty: no lifting greater than 10 lbs, sit/stand option required, bilateral AFO accommodation needed.\nWork Status: Modified duty — sedentary, no lifting >10 lbs, sit/stand option required.\nIs Member able to accommodate? Yes — modified duty placement confirmed by insured.\nUpdated Member: Yes\nMMI Date: 11-14-25\nPT: Discharged from outpatient PT. Home exercise program in place."
+          "quote": "She attended her scheduled follow-up yesterday. Her progress continues to be gradual. She still relies on a walker but feels she can occasionally manage short distances without it. Her physical therapist has begun addressing this in treatment. Dr. Harmon has recommended she continue PT 2x per week."
         }
       ]
     },
@@ -1374,7 +1374,7 @@
       "occurred_on": "2025-10-14",
       "lag_days": 19,
       "on_time_delta_days": 0,
-      "event_id": "8e5d9471-ecdf-4f12-a8c1-0e33fb2df13f",
+      "event_id": "7ff6ae81-4912-4c33-b451-d6fc0b7d0bc5",
       "extraction_method": "merged",
       "evidence": [
         {
@@ -1383,14 +1383,36 @@
         },
         {
           "note_date": "2025-10-17",
-          "quote": "Date of Appointment: 10-14-25\nProvider: Bridge Functional Capacity Evaluators\nSpecialty: Occupational Therapy / FCE\nFCE Summary: Patient A was evaluated over a 4-hour period on 10/14/2025."
+          "quote": "Date of Appointment: 10-14-25\nProvider: Bridge Functional Capacity Evaluators\nSpecialty: Occupational Therapy / FCE\nFCE Summary: Patient A was evaluated over a 4-hour period on 10/14/2025. Validity testing indicated a reliable effort. Results indicate the claimant is capable of sedentary to light-duty work. She is able to sit for up to 30 minutes at a time and stand briefly with assistive device. No lifting greater than 10 lbs from floor to waist. She requires bilateral AFOs for ambulation and a rollator for distances greater than approximately 50 feet. She demonstrated residual deficits in bilateral lower extremity strength and coordination consistent with her diagnosed cord syndrome. She is not capable of returning to her prior distribution/warehouse role."
+        }
+      ]
+    },
+    {
+      "parties": [
+        "Harmon"
+      ],
+      "scheduled_notice_date": "2025-10-29",
+      "scheduled_for_date": "2025-11-14",
+      "occurred_on": "2025-11-14",
+      "lag_days": 16,
+      "on_time_delta_days": 0,
+      "event_id": "be16f5df-1f72-4ca8-9944-fdc0e7ba98a5",
+      "extraction_method": "merged",
+      "evidence": [
+        {
+          "note_date": "2025-10-29",
+          "quote": "Her next appointment with Dr. Harmon is scheduled for 11-14-25."
+        },
+        {
+          "note_date": "2025-11-14",
+          "quote": "Date of Appointment: 11-14-25\nNext Office Visit: PRN\nName of physician: Dr. Harmon\nClinic: Orthopedic & Spine Associates\nSpecialty: Spine\nDiagnosis & Assessment: Anterior cord syndrome predominating over central cord syndrome at C4-5 and C5-6, s/p ACDF at Regional Medical Center. She has made meaningful gains over the course of this year. She is ambulating with a cane for short indoor distances and continues to use the rollator outdoors. Bilateral AFOs remain in use.\nPlan: She has reached a plateau in her neurological recovery consistent with the natural history of cord compression syndrome. I am placing her at maximum medical improvement effective today. She may continue her home exercise program independently. Follow-up on a PRN basis for acute flares. She is released to sedentary modified duty: no lifting greater than 10 lbs, sit/stand option required, bilateral AFO accommodation needed.\nWork Status: Modified duty — sedentary, no lifting >10 lbs, sit/stand option required.\nIs Member able to accommodate? Yes — modified duty placement confirmed by insured.\nUpdated Member: Yes\nMMI Date: 11-14-25\nPT: Discharged from outpatient PT. Home exercise program in place."
         }
       ]
     }
   ],
   "lag": {
-    "median": 25.0,
-    "p90": 39.5,
-    "mean": 21.6875
+    "median": 16.0,
+    "p90": 32.400000000000006,
+    "mean": 16.88235294117647
   }
 }

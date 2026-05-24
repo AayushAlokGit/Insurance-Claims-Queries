@@ -56,8 +56,19 @@ def _cmd_ingest(args: argparse.Namespace) -> int:
 
     # --- Per-run logging --------------------------------------
     # File stem stands in for claim_id in the log filename until
-    # the loader has actually parsed the file.
-    log_path = setup_logging(claim_id=path.stem, verbose=args.verbose)
+    # the loader has actually parsed the file. Tags carry the
+    # other run-distinguishing knobs (extractor mode, parallelism)
+    # so successive runs against the same file don't collide.
+    mode_tag = "rule-only" if args.no_llm else (args.provider or "google")
+    log_path = setup_logging(
+        subcommand="ingest",
+        claim_id=path.stem,
+        tags={
+            "mode": mode_tag,
+            "workers": f"w{args.workers}",
+        },
+        verbose=args.verbose,
+    )
     log = logging.getLogger("claims.cli")
     log.info("ingest start file=%s db=%s log=%s", path.name, args.db, log_path)
 
@@ -203,6 +214,19 @@ def _cmd_ingest(args: argparse.Namespace) -> int:
 
 def _cmd_query(args: argparse.Namespace) -> int:
     """Run one of the four canned queries and print typed JSON."""
+    log_path = setup_logging(
+        subcommand="query",
+        claim_id=args.claim_id,
+        tags={"which": args.which},
+    )
+    log = logging.getLogger("claims.cli")
+    log.info(
+        "query start which=%s claim_id=%s db=%s log=%s",
+        args.which,
+        args.claim_id,
+        args.db,
+        log_path,
+    )
     conn = connect(args.db)
     # argparse already restricts `which` to q1-q4 via choices=…
     if args.which == "q1":

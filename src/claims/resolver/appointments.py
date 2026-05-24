@@ -211,6 +211,15 @@ def _merge(events: list[Event]) -> Event:
 
     status = _resolve_status(events)
 
+    seen_quotes: set[str] = set()
+    ordered_quotes: list[str] = []
+    for ev in events:
+        q = ev.attributes.evidence_quote  # type: ignore[union-attr]
+        if q and q not in seen_quotes:
+            seen_quotes.add(q)
+            ordered_quotes.append(q)
+    merged_quote = " ||| ".join(ordered_quotes) if ordered_quotes else None
+
     merged_attrs = AppointmentAttributes(
         parties=_merge_parties(events),
         specialty=specialty,
@@ -220,6 +229,7 @@ def _merge(events: list[Event]) -> Event:
         status=status,
         appointment_type=appointment_type,
         source_note_date=latest_note_date,
+        evidence_quote=merged_quote,
     )
     event_date = (
         merged_attrs.occurred_on

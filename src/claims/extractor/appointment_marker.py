@@ -86,6 +86,7 @@ class AppointmentMarkerExtractor:
             # leave empty and let date alone carry the merge.
             parties: tuple[str, ...] = (provider,) if provider else ()
 
+            quote = m.group(0).strip()
             if _scheduled_marker(m.group("marker")):
                 attrs = AppointmentAttributes(
                     parties=parties,
@@ -93,6 +94,7 @@ class AppointmentMarkerExtractor:
                     scheduled_for_date=event_date,
                     status="scheduled",
                     source_note_date=note.note_date,
+                    evidence_quote=quote,
                 )
             else:
                 attrs = AppointmentAttributes(
@@ -100,6 +102,7 @@ class AppointmentMarkerExtractor:
                     occurred_on=event_date,
                     status="unknown",
                     source_note_date=note.note_date,
+                    evidence_quote=quote,
                 )
 
             events.append(

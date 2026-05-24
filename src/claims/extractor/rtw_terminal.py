@@ -14,6 +14,7 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
+from claims.extractor._evidence import EVIDENCE_QUOTE_GUIDANCE
 from claims.llm import StructuredLLM, quote_in_body
 from claims.llm.base import LLMError
 from claims.models import Event, Note, RTWTerminalAttributes
@@ -70,9 +71,11 @@ NEGATIVE — do NOT extract:
 - General discussion of permanency without a declaration ("permanency stipulation in negotiation" — not yet declared)
 - "May not be able to return to her prior role" → speculation, not a terminal declaration
 
-EVIDENCE_QUOTE is REQUIRED — a verbatim substring of the body.
+{evidence_guidance}
 
-At most one terminal event per note. If no terminal state is positively declared, return rtw_terminal: null. Do not infer from silence."""
+At most one terminal event per note. If no terminal state is positively declared, return rtw_terminal: null. Do not infer from silence.""".format(
+    evidence_guidance=EVIDENCE_QUOTE_GUIDANCE
+)
 
 
 class RtwTerminalExtractor:
@@ -112,6 +115,7 @@ class RtwTerminalExtractor:
                 attributes=RTWTerminalAttributes(
                     reason=payload.reason,
                     context=payload.context,
+                    evidence_quote=payload.evidence_quote,
                 ),
                 extraction_method="llm",
             )

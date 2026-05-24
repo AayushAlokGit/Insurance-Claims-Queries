@@ -54,6 +54,7 @@ class ReserveChangeAttributes(_AttributesBase):
     previous_amount: Decimal | None = None
     delta: Decimal | None = None
     author: str | None = None
+    evidence_quote: str | None = None
 
 
 class AppointmentAttributes(_AttributesBase):
@@ -78,6 +79,7 @@ class AppointmentAttributes(_AttributesBase):
     status: AppointmentStatus
     appointment_type: AppointmentType | None = None
     source_note_date: date | None = None
+    evidence_quote: str | None = None
 
     @property
     def encounter_date(self) -> date | None:
@@ -94,6 +96,7 @@ class ReturnToWorkAttributes(_AttributesBase):
     type: Literal["return_to_work"] = "return_to_work"
     duty_type: RTWDutyType
     role: str | None = None
+    evidence_quote: str | None = None
 
 
 class RTWTerminalAttributes(_AttributesBase):
@@ -102,6 +105,7 @@ class RTWTerminalAttributes(_AttributesBase):
     type: Literal["rtw_terminal"] = "rtw_terminal"
     reason: RTWTerminalReason
     context: str | None = None
+    evidence_quote: str | None = None
 
 
 EventAttributes = Annotated[

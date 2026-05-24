@@ -182,6 +182,7 @@ def main() -> int:
                     f"  -> status={attrs.status:<9}  date={date_str}  "
                     f"parties=[{parties_str}]"
                 )
+                print(f"     quote: {attrs.evidence_quote!r}")
                 by_status[attrs.status] = by_status.get(attrs.status, 0) + 1
             total += len(events)
             print()

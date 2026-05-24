@@ -18,6 +18,7 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
+from claims.extractor._evidence import EVIDENCE_QUOTE_GUIDANCE
 from claims.llm import StructuredLLM, quote_in_body
 from claims.llm.base import LLMError
 from claims.models import Event, Note, ReturnToWorkAttributes
@@ -77,9 +78,11 @@ DUTY TYPE:
 - modified — the claimant returned with restrictions, on light/sedentary/modified duty
 - full    — the claimant returned to their pre-injury role with no restrictions
 
-EVIDENCE_QUOTE is REQUIRED — a verbatim substring of the body that supports the extraction.
+{evidence_guidance}
 
-If no qualifying return-to-work event is described, return rtw: null. Do not infer from silence."""
+If no qualifying return-to-work event is described, return rtw: null. Do not infer from silence.""".format(
+    evidence_guidance=EVIDENCE_QUOTE_GUIDANCE
+)
 
 
 class ReturnToWorkExtractor:
@@ -119,6 +122,7 @@ class ReturnToWorkExtractor:
                 attributes=ReturnToWorkAttributes(
                     duty_type=payload.duty_type,
                     role=payload.role,
+                    evidence_quote=payload.evidence_quote,
                 ),
                 extraction_method="llm",
             )

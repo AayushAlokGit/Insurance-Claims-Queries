@@ -386,7 +386,7 @@ when they need an ISO value.
    null" — a recoverable miss, not a corrupted note.
 3. **Centralization is achieved by shared code, not by mass rewrite.**
    The promise of DESIGN.md §4.2 ("date parsing is centralized in
-   one module") is satisfied by exporting one well-tested `parseDate`
+   one module") is satisfied by exporting one well-tested `parse_date`
    function that both the Normalizer (for headers) and the extractors
    (for body substrings) call. The benefits — single test suite,
    one place to change the two-digit-year pivot, one place to fix a

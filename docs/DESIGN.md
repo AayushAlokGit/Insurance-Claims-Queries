@@ -1,35 +1,9 @@
 # Claim Analysis System — Design
 
-## Scope
-
 This is a time-boxed take-home exercise. The deliverable is a working ingestion
 and query system, scoped narrowly on purpose. The brief explicitly rewards depth
-over breadth — every design choice below is made under that constraint.
-
-**Built end-to-end**
-- Ingest both sample claim files; persist into SQLite.
-- Answer the four sample queries with tested, demoable functions.
-- Hybrid extraction — deterministic rules for templated data, an LLM for
-  semantic judgment.
-
-**Designed for, not built**
-- Eval harness with a hand-labeled gold set — a nice-to-have X-factor extension;
-  the architecture is ready for it (see §7).
-- Corpus-scale operation (Postgres swap, parallel extraction, batch LLM jobs).
-- Additional event types / queries via the `Extractor` interface.
-- Natural-language → SQL query layer.
-- Promotion of hot event types from JSON `attributes` into typed tables.
-
-**Explicitly out of scope**
-- Raw-note persistence, re-extraction workflows, audit / `--explain` tooling
-  (see DD-003).
-- Confidence scoring / human-review surface.
-- Full medical extraction (PT exercise lists, imaging detail) beyond what the
-  four queries need.
-- UI, auth, multi-tenancy, streaming ingest, a server DB.
-
-Detailed scope/tradeoff reasoning is in §8; the decisions feeding into this
-scope live in `design-decisions.md`.
+over breadth — every design choice below is made under that constraint. See §8
+for the scope split and `design-decisions.md` for the decisions feeding into it.
 
 ## 1. Overview
 
@@ -231,18 +205,12 @@ Resolver's job. The atomic contract: *one note in, zero or more typed
 `CandidateEvent`s out.*
 
 **The Extractor interface — extensibility.** Every extractor, rule or LLM,
-implements the same shape so new event types are additive:
-
-```ts
-interface Extractor {
-  readonly eventType: string;
-  canHandle(note: Note): boolean;          // cheap pre-filter, no LLM cost
-  extract(note: Note, ctx: ClaimContext): Promise<CandidateEvent[]>;
-}
-```
-
-The pipeline runs all registered extractors over each note; matches are
-concatenated. Adding query support = write one new `Extractor` + register it.
+implements the same shape so new event types are additive: an `event_type`
+attribute, a cheap `can_handle(note) -> bool` prefilter that incurs no LLM
+cost, and `extract(note) -> list[Event]`. The pipeline runs all registered
+extractors over each note; matches are concatenated. Adding query support =
+write one new `Extractor` + register it. See `src/claims/extractor/base.py`
+for the live protocol.
 
 **The LLM contract — four anti-hallucination principles.** Schema-constrained
 output (tool-use / JSON mode, never free text); discriminated union for the
@@ -283,9 +251,10 @@ module.
 **Two query access paths:**
 
 1. **Canned query functions** — one tested function per sample query
-   (`returnToWorkDays(claimId)`, `appointmentsAttended(claimId)`,
-   `reserveChangeSummary(claimId)`, `scheduleToVisitLag(claimId)`). These are
-   the reliable, demoable deliverable.
+   (`q1`, `q2`, `q3`, `q4` in `src/claims/query/queries.py`, each returning
+   a typed structured result — discriminated union for Q1, per-bucket
+   summary for Q3, per-visit distribution for Q4). These are the reliable,
+   demoable deliverable.
 2. **Raw SQL** — the event schema is simple enough to query directly, and this
    is the corpus-trend surface the brief asks for: *"average days-to-RTW by
    jurisdiction,"* *"reserve volatility across all claims"* are plain `GROUP BY`s
@@ -303,8 +272,8 @@ in cleanly later — sketched here so the extension shape is on the record.
 - **Gold dataset.** Hand-label the four query answers for both sample claims in
   `evals/gold.json`. Small, but turns "did we get it right" into a pass/fail
   signal.
-- **Eval harness.** `npm run eval` runs all canned query functions against gold
-  and reports per-query accuracy — a regression net as extractors evolve.
+- **Eval harness.** Runs all canned query functions against gold and reports
+  per-query accuracy — a regression net as extractors evolve.
 
 For the MVP, correctness is established by running the four canned queries on
 the two sample claims and checking the answers against the source notes. Unit
@@ -364,38 +333,7 @@ The brief weights "clear evolution paths." The design has them built in:
 - **Document parsing** → embedded sub-documents (PT notes, FCE reports) become
   first-class — add extractors that recognize their markers.
 
-## 10. Tech Stack
-
-| Concern | Choice | Why |
-|---------|--------|-----|
-| Language | **TypeScript / Node** | Matches Adaptional's stack; strong typing makes the event schema self-documenting |
-| Store | **SQLite** (`better-sqlite3`) | Zero-setup, single file, SQL-native |
-| LLM | **Claude** via Anthropic SDK | Structured output via tool-use; prompt caching for corpus-scale ingest |
-| CLI | `ingest <file>`, `query <name> <claim>`, `eval` | Easy to run and demo on a laptop |
-| Tests | Vitest | Unit-test the date parser, rule extractors, resolver |
-
-## 11. Repository Layout
-
-```
-src/
-  loader/        # file -> Claim stub + Note[]
-  normalize/     # date parsing, text cleanup  (heavily tested)
-  extract/
-    extractor.ts # the Extractor interface
-    rules/       # reserve, appointment-marker extractors
-    llm/         # semantic extractors + JSON-schema contracts
-  resolve/       # event dedup / merge
-  store/         # SQLite repository (the only DB-aware module)
-  query/
-    canned/      # one tested function per sample query
-                 # (raw-SQL corpus trends run directly against the SQLite file)
-  cli.ts
-```
-
-A future `evals/` directory (gold set + harness) is sketched in §7 as a
-nice-to-have extension, not part of the MVP build.
-
-## 12. Summary
+## 10. Summary
 
 The system treats claim analysis as an **ETL problem, not a Q&A problem**: parse
 each claim once into a normalized timeline of typed, dated `Event`s, store them

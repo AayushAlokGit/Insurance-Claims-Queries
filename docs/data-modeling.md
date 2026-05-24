@@ -389,7 +389,7 @@ After loading and normalization, the extractors emit:
 | event_type | event_date | attributes (key fields) | extraction_method |
 |---|---|---|---|
 | `return_to_work` | 2025-11-10 | `duty_type: modified, role: scheduling coordinator` | `llm` |
-| `appointment` | 2025-12-05 | `provider: Dr. Harmon, specialty: spine, scheduled_notice_date: 2025-11-14, scheduled_for_date: 2025-12-05, status: scheduled` | `rule` (NOV anchor) |
+| `appointment` | 2025-12-05 | `parties: ["Dr. Harmon"], specialty: spine, scheduled_notice_date: 2025-11-14, scheduled_for_date: 2025-12-05, status: scheduled` | `rule` (NOV anchor) |
 
 **Note what's deliberately NOT emitted:**
 - The Reserving line says "unchanged" — the rule pattern requires

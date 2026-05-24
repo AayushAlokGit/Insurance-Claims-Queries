@@ -244,7 +244,7 @@ class AppointmentExtractor:
                 scheduled_notice_date=note.note_date,
                 scheduled_for_date=appt.appointment_date,
                 status="scheduled",
-                source_note_date=note.note_date,
+                source_note_dates=(note.note_date,),
                 evidence_quote=appt.evidence_quote,
             )
         else:
@@ -252,7 +252,7 @@ class AppointmentExtractor:
                 parties=tuple(parties),
                 occurred_on=appt.appointment_date,
                 status=appt.status,
-                source_note_date=note.note_date,
+                source_note_dates=(note.note_date,),
                 evidence_quote=appt.evidence_quote,
             )
         return Event(

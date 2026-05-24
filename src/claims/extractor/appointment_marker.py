@@ -93,7 +93,7 @@ class AppointmentMarkerExtractor:
                     scheduled_notice_date=note.note_date,
                     scheduled_for_date=event_date,
                     status="scheduled",
-                    source_note_date=note.note_date,
+                    source_note_dates=(note.note_date,),
                     evidence_quote=quote,
                 )
             else:
@@ -101,7 +101,7 @@ class AppointmentMarkerExtractor:
                     parties=parties,
                     occurred_on=event_date,
                     status="unknown",
-                    source_note_date=note.note_date,
+                    source_note_dates=(note.note_date,),
                     evidence_quote=quote,
                 )
 

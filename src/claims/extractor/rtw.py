@@ -122,7 +122,7 @@ class ReturnToWorkExtractor:
                 attributes=ReturnToWorkAttributes(
                     duty_type=payload.duty_type,
                     role=payload.role,
-                    source_note_date=note.note_date,
+                    source_note_dates=(note.note_date,),
                     evidence_quote=payload.evidence_quote,
                 ),
                 extraction_method="llm",

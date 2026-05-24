@@ -104,7 +104,7 @@ not built (DD-012; mirrors `data-modeling.md §4.5`).
 | `event_type` | `attributes` payload | Drives query |
 |--------------|----------------------|--------------|
 | `reserve_change` | `bucket` ("Indemnity / Lost Time"), `previous_amount`, `new_amount`, `delta` | Q3 |
-| `appointment` | `parties` (DD-016), `specialty`, `scheduled_notice_date`, `scheduled_for_date`, `occurred_on`, `status`, `appointment_type`, `source_note_date` (DD-017) | Q2, Q4 |
+| `appointment` | `parties` (DD-016), `specialty`, `scheduled_notice_date`, `scheduled_for_date`, `occurred_on`, `status`, `appointment_type`, `source_note_dates` (DD-017; tuple of all contributing notes) | Q2, Q4 |
 | `return_to_work` | `duty_type` (modified / full), `role` | Q1 |
 | `rtw_terminal` | `reason` (`ptd` / `deceased` / `separated` / `closed_no_rtw`) | Q1 (definitive negative) |
 
@@ -169,7 +169,7 @@ uses deterministic normalization (no fuzzy matching, no ±N window).
 Status precedence on conflict is **asymmetric** (DD-017):
 `missed`/`cancelled` beat `attended`/`scheduled`/`unknown`; within the
 negative tier `missed > cancelled`; within positives `attended > scheduled
-> unknown`; ties broken by the more recent `source_note_date`.
+> unknown`; ties broken by the more recent `max(source_note_dates)`.
 This stage also computes derived fields like `reserve_change.delta` once
 events are ordered.
 

@@ -19,6 +19,12 @@ class Q1Returned(BaseModel):
     days: int
     rtw_date: date
     duty_type: Literal["modified", "full"]
+    # Debug fields — the underlying event the answer was built from.
+    role: str | None = None
+    event_id: str | None = None
+    extraction_method: str | None = None
+    source_note_dates: list[date] = Field(default_factory=list)
+    evidence_quote: str | None = None
 
 
 class Q1NeverReturned(BaseModel):
@@ -26,6 +32,11 @@ class Q1NeverReturned(BaseModel):
     status: Literal["never_returned"] = "never_returned"
     reason: Literal["ptd", "deceased", "separated", "closed_no_rtw"]
     terminal_date: date
+    context: str | None = None
+    event_id: str | None = None
+    extraction_method: str | None = None
+    source_note_dates: list[date] = Field(default_factory=list)
+    evidence_quote: str | None = None
 
 
 class Q1Pending(BaseModel):
@@ -56,6 +67,10 @@ class Q2Appointment(BaseModel):
     parties: list[str]
     specialty: str | None
     appointment_type: str | None
+    event_id: str | None = None
+    extraction_method: str | None = None
+    source_note_dates: list[date] = Field(default_factory=list)
+    evidence_quote: str | None = None
 
 
 class Q2Result(BaseModel):
@@ -73,6 +88,11 @@ class Q3Swing(BaseModel):
     new_amount: Decimal
     previous_amount: Decimal
     delta: Decimal
+    author: str | None = None
+    event_id: str | None = None
+    extraction_method: str | None = None
+    source_note_dates: list[date] = Field(default_factory=list)
+    evidence_quote: str | None = None
 
 
 class Q3BucketSummary(BaseModel):
@@ -104,6 +124,10 @@ class Q4Visit(BaseModel):
     occurred_on: date
     lag_days: int
     on_time_delta_days: int
+    event_id: str | None = None
+    extraction_method: str | None = None
+    source_note_dates: list[date] = Field(default_factory=list)
+    evidence_quote: str | None = None
 
 
 class Q4Distribution(BaseModel):

@@ -204,6 +204,9 @@ def _appt(
     source_note_date: date | None = None,
 ) -> Event:
     anchor = occurred_on or scheduled_for_date or date(2025, 1, 1)
+    note_dates: tuple[date, ...] = (
+        (source_note_date,) if source_note_date is not None else ()
+    )
     return Event(
         event_id=eid,
         claim_id="C",
@@ -215,7 +218,7 @@ def _appt(
             scheduled_for_date=scheduled_for_date,
             scheduled_notice_date=scheduled_notice_date,
             status=status,  # type: ignore[arg-type]
-            source_note_date=source_note_date,
+            source_note_dates=note_dates,
         ),
         extraction_method=method,  # type: ignore[arg-type]
     )
@@ -378,9 +381,12 @@ def test_positive_tier_recency_tiebreaks_unknown_vs_scheduled() -> None:
     )
     [merged] = resolve_appointments([early, later])
     assert merged.attributes.status == "scheduled"
-    # Merged event keeps the LATEST source_note_date for downstream
-    # re-merge stability.
-    assert merged.attributes.source_note_date == date(2025, 5, 20)
+    # Merged event keeps the union of contributing source_note_dates,
+    # sorted ascending. DD-017's tiebreaker reads max(...) when needed.
+    assert merged.attributes.source_note_dates == (
+        date(2025, 5, 1),
+        date(2025, 5, 20),
+    )
 
 
 def test_scheduled_upgrades_to_attended_without_negative() -> None:

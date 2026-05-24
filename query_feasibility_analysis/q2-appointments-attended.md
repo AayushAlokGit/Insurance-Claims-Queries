@@ -9,7 +9,7 @@
 > - Merge key = `(claim_id, encounter_date exact, parties_overlap ≥ 1)`
 >   on a LLM-emitted `parties` list (DD-016).
 > - Status precedence is **asymmetric**: `missed`/`cancelled` beat
->   `attended`/`scheduled`/`unknown`; ties broken by `source_note_date`
+>   `attended`/`scheduled`/`unknown`; ties broken by `max(source_note_dates)`
 >   recency (DD-017).
 > See `docs/resolver.md §5` and `design-decisions.md` DD-016/DD-017.
 

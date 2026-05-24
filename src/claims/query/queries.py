@@ -50,8 +50,13 @@ def q1_return_to_work(conn: Connection, claim_id: str) -> Q1Result:
 
     rtw = conn.execute(
         """
-        SELECT event_date,
-               json_extract(attributes, '$.duty_type') AS duty_type
+        SELECT event_id,
+               event_date,
+               extraction_method,
+               json_extract(attributes, '$.duty_type')         AS duty_type,
+               json_extract(attributes, '$.role')              AS role,
+               json_extract(attributes, '$.source_note_dates') AS source_note_dates,
+               json_extract(attributes, '$.evidence_quote')    AS evidence_quote
         FROM event
         WHERE claim_id = ?
           AND event_type = 'return_to_work'
@@ -66,12 +71,22 @@ def q1_return_to_work(conn: Connection, claim_id: str) -> Q1Result:
             days=(rtw_date - dol).days,
             rtw_date=rtw_date,
             duty_type=rtw["duty_type"],
+            role=rtw["role"],
+            event_id=rtw["event_id"],
+            extraction_method=rtw["extraction_method"],
+            source_note_dates=_parse_dates(rtw["source_note_dates"]),
+            evidence_quote=rtw["evidence_quote"],
         )
 
     term = conn.execute(
         """
-        SELECT event_date,
-               json_extract(attributes, '$.reason') AS reason
+        SELECT event_id,
+               event_date,
+               extraction_method,
+               json_extract(attributes, '$.reason')            AS reason,
+               json_extract(attributes, '$.context')           AS context,
+               json_extract(attributes, '$.source_note_dates') AS source_note_dates,
+               json_extract(attributes, '$.evidence_quote')    AS evidence_quote
         FROM event
         WHERE claim_id = ?
           AND event_type = 'rtw_terminal'
@@ -84,6 +99,11 @@ def q1_return_to_work(conn: Connection, claim_id: str) -> Q1Result:
         return Q1NeverReturned(
             reason=term["reason"],
             terminal_date=date.fromisoformat(term["event_date"]),
+            context=term["context"],
+            event_id=term["event_id"],
+            extraction_method=term["extraction_method"],
+            source_note_dates=_parse_dates(term["source_note_dates"]),
+            evidence_quote=term["evidence_quote"],
         )
 
     days_open = (date.today() - dol).days
@@ -104,13 +124,40 @@ def _parse_parties(raw: str | None) -> list[str]:
     return [str(x) for x in loaded if isinstance(x, str)]
 
 
+def _parse_dates(raw: str | None) -> list[date]:
+    """Decode a JSON array of ISO date strings into a list[date].
+    Malformed entries are silently skipped so a single garbled
+    audit field does not break the whole query result."""
+    if raw is None:
+        return []
+    try:
+        loaded = json.loads(raw)
+    except (TypeError, ValueError):
+        return []
+    if not isinstance(loaded, list):
+        return []
+    out: list[date] = []
+    for x in loaded:
+        if not isinstance(x, str):
+            continue
+        try:
+            out.append(date.fromisoformat(x))
+        except ValueError:
+            continue
+    return out
+
+
 def q2_appointments_attended(conn: Connection, claim_id: str) -> Q2Result:
     rows = conn.execute(
         """
-        SELECT event_date,
-               json_extract(attributes, '$.parties')          AS parties,
-               json_extract(attributes, '$.specialty')        AS specialty,
-               json_extract(attributes, '$.appointment_type') AS appointment_type
+        SELECT event_id,
+               event_date,
+               extraction_method,
+               json_extract(attributes, '$.parties')           AS parties,
+               json_extract(attributes, '$.specialty')         AS specialty,
+               json_extract(attributes, '$.appointment_type')  AS appointment_type,
+               json_extract(attributes, '$.source_note_dates') AS source_note_dates,
+               json_extract(attributes, '$.evidence_quote')    AS evidence_quote
         FROM event
         WHERE claim_id = ?
           AND event_type = 'appointment'
@@ -125,6 +172,10 @@ def q2_appointments_attended(conn: Connection, claim_id: str) -> Q2Result:
             parties=_parse_parties(r["parties"]),
             specialty=r["specialty"],
             appointment_type=r["appointment_type"],
+            event_id=r["event_id"],
+            extraction_method=r["extraction_method"],
+            source_note_dates=_parse_dates(r["source_note_dates"]),
+            evidence_quote=r["evidence_quote"],
         )
         for r in rows
     ]
@@ -134,11 +185,16 @@ def q2_appointments_attended(conn: Connection, claim_id: str) -> Q2Result:
 def q3_reserve_changes(conn: Connection, claim_id: str) -> Q3Result:
     rows = conn.execute(
         """
-        SELECT event_date,
-               json_extract(attributes, '$.bucket')           AS bucket,
-               json_extract(attributes, '$.new_amount')       AS new_amount,
-               json_extract(attributes, '$.previous_amount')  AS previous_amount,
-               json_extract(attributes, '$.delta')            AS delta
+        SELECT event_id,
+               event_date,
+               extraction_method,
+               json_extract(attributes, '$.bucket')            AS bucket,
+               json_extract(attributes, '$.new_amount')        AS new_amount,
+               json_extract(attributes, '$.previous_amount')   AS previous_amount,
+               json_extract(attributes, '$.delta')             AS delta,
+               json_extract(attributes, '$.author')            AS author,
+               json_extract(attributes, '$.source_note_dates') AS source_note_dates,
+               json_extract(attributes, '$.evidence_quote')    AS evidence_quote
         FROM event
         WHERE claim_id = ?
           AND event_type = 'reserve_change'
@@ -154,6 +210,11 @@ def q3_reserve_changes(conn: Connection, claim_id: str) -> Q3Result:
             new_amount=Decimal(str(r["new_amount"])),
             previous_amount=Decimal(str(r["previous_amount"])),
             delta=Decimal(str(r["delta"])),
+            author=r["author"],
+            event_id=r["event_id"],
+            extraction_method=r["extraction_method"],
+            source_note_dates=_parse_dates(r["source_note_dates"]),
+            evidence_quote=r["evidence_quote"],
         )
         by_bucket.setdefault(r["bucket"], []).append(swing)
     summaries = [
@@ -189,10 +250,14 @@ def q4_schedule_to_seen(conn: Connection, claim_id: str) -> Q4Result:
     outputs into a single event."""
     rows = conn.execute(
         """
-        SELECT json_extract(attributes, '$.parties')              AS parties,
+        SELECT event_id,
+               extraction_method,
+               json_extract(attributes, '$.parties')              AS parties,
                json_extract(attributes, '$.scheduled_notice_date') AS notice,
                json_extract(attributes, '$.scheduled_for_date')    AS booked,
-               json_extract(attributes, '$.occurred_on')           AS occurred
+               json_extract(attributes, '$.occurred_on')           AS occurred,
+               json_extract(attributes, '$.source_note_dates')     AS source_note_dates,
+               json_extract(attributes, '$.evidence_quote')        AS evidence_quote
         FROM event
         WHERE claim_id = ?
           AND event_type = 'appointment'
@@ -225,6 +290,10 @@ def q4_schedule_to_seen(conn: Connection, claim_id: str) -> Q4Result:
                 occurred_on=occurred,
                 lag_days=lag_days,
                 on_time_delta_days=on_time_delta,
+                event_id=r["event_id"],
+                extraction_method=r["extraction_method"],
+                source_note_dates=_parse_dates(r["source_note_dates"]),
+                evidence_quote=r["evidence_quote"],
             )
         )
         lags.append(lag_days)

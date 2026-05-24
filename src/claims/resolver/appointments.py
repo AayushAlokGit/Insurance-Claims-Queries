@@ -50,7 +50,7 @@ Status precedence (DD-017, asymmetric):
       (Within negatives: missed > cancelled.)
     - Otherwise (all positives) → attended > scheduled > unknown.
     - Ties at the same effective tier are broken by the more
-      recent `source_note_date`.
+      recent `source_note_dates` entry (i.e. `max(source_note_dates)`).
 
 This replaces the previous monotonic-up rank, which silently
 upgraded `missed` → `attended` whenever both existed for the same
@@ -103,18 +103,19 @@ def _should_merge(a: Event, b: Event) -> bool:
     return parties_overlap(a_attrs.parties, b_attrs.parties)
 
 
-_DATE_MIN = date.min  # tiebreaker default for events with no source_note_date
+_DATE_MIN = date.min  # tiebreaker default for events with no source dates
 
 
-def _note_date(ev: Event) -> date:
+def _latest_note_date(ev: Event) -> date:
     attrs = ev.attributes
     assert isinstance(attrs, AppointmentAttributes)
-    return attrs.source_note_date or _DATE_MIN
+    return max(attrs.source_note_dates) if attrs.source_note_dates else _DATE_MIN
 
 
 def _resolve_status(events: list[Event]) -> AppointmentStatus:
     """DD-017 status resolver. Negatives beat positives; within a
-    tier, max rank wins with `source_note_date` as the tiebreaker.
+    tier, max rank wins with the latest `source_note_dates` entry
+    as the tiebreaker.
 
     `events` is the full merge group — `_should_merge` already
     confirmed they describe the same encounter."""
@@ -130,7 +131,7 @@ def _resolve_status(events: list[Event]) -> AppointmentStatus:
             negatives,
             key=lambda e: (
                 _NEGATIVE_RANK[e.attributes.status],  # type: ignore[index]
-                _note_date(e),
+                _latest_note_date(e),
             ),
         )
         return chosen.attributes.status  # type: ignore[return-value]
@@ -139,7 +140,7 @@ def _resolve_status(events: list[Event]) -> AppointmentStatus:
         events,
         key=lambda e: (
             _POSITIVE_RANK.get(e.attributes.status, 0),  # type: ignore[arg-type]
-            _note_date(e),
+            _latest_note_date(e),
         ),
     )
     return chosen.attributes.status  # type: ignore[return-value]
@@ -185,7 +186,11 @@ def _merge(events: list[Event]) -> Event:
     scheduled_notice_date = base_attrs.scheduled_notice_date
     specialty = base_attrs.specialty
     appointment_type = base_attrs.appointment_type
-    latest_note_date = base_attrs.source_note_date
+    # Union of every contributing note date across the group, deduped
+    # and sorted ascending. Single-source events keep their one entry;
+    # merged events get the full audit trail. DD-017's tiebreaker uses
+    # max(...) when comparing groups.
+    all_note_dates: set[date] = set(base_attrs.source_note_dates)
 
     for ev in events[1:]:
         attrs = ev.attributes
@@ -201,13 +206,7 @@ def _merge(events: list[Event]) -> Event:
             scheduled_notice_date = attrs.scheduled_notice_date
         specialty = specialty or attrs.specialty
         appointment_type = appointment_type or attrs.appointment_type
-        # DD-017: preserve the latest note_date through merges so
-        # subsequent re-merges see recency-correct tiebreak data.
-        if attrs.source_note_date is not None and (
-            latest_note_date is None
-            or attrs.source_note_date > latest_note_date
-        ):
-            latest_note_date = attrs.source_note_date
+        all_note_dates.update(attrs.source_note_dates)
 
     status = _resolve_status(events)
 
@@ -228,7 +227,7 @@ def _merge(events: list[Event]) -> Event:
         occurred_on=occurred_on,
         status=status,
         appointment_type=appointment_type,
-        source_note_date=latest_note_date,
+        source_note_dates=tuple(sorted(all_note_dates)),
         evidence_quote=merged_quote,
     )
     event_date = (

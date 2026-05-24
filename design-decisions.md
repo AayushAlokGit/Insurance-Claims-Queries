@@ -885,6 +885,16 @@ same encounter (multiple confirmations) keep the most recent.
   separately: the 8/14 and 8/18 notes in claim 2 must produce
   `missed` extractions for the asymmetric rule to fire at all.
 
+**Postscript (2026-05-23).** The `source_note_date: date | None`
+field was widened to `source_note_dates: tuple[date, ...]` across
+all four event payloads. Same semantics for the DD-017 tiebreaker
+(`max(source_note_dates)` is the new "latest"), but merges now
+preserve every contributing note date instead of collapsing to
+one — so a merged event's audit trail names every note that fed
+it, not just the most recent. Schema-additive (DD-007), no design
+re-litigation; the rename just made the merged-event audit story
+complete.
+
 <!-- Append new decisions below this line. Template:
 
 ## DD-0NN — <short title>

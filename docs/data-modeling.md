@@ -199,7 +199,7 @@ Source: `Activity: Reserving` note containing the line
   "new_amount": 321014.00,
   "delta": 41014.00,
   "author": "M.H.",
-  "source_note_date": "2025-09-15",
+  "source_note_dates": ["2025-09-15"],
   "evidence_quote": "Indemnity for (2) Lost Time Changed to $321,014.00"
 }
 ```
@@ -211,9 +211,11 @@ Source: `Activity: Reserving` note containing the line
   not silent merge.
 - `previous_amount` and `delta` are computed by the Resolver after events
   are ordered by `event_date`, not extracted directly.
-- `source_note_date` + `evidence_quote` are the debugging pair: which
-  note this row came from, and the verbatim text inside it that
-  justified the extraction.
+- `source_note_dates` + `evidence_quote` are the debugging pair: a
+  sorted tuple of every note date that contributed to this row, and
+  the verbatim text from inside the source note that justified the
+  extraction. Single-source events have one date; resolver-merged
+  events keep every contributing date for audit.
 - `extraction_method` should always be `"rule"`; any `"llm"` here is a bug.
 
 ### 4.2 `appointment` — Q2 & Q4, hybrid
@@ -230,7 +232,7 @@ Resolver.
   "occurred_on": "2025-09-15",
   "status": "attended",
   "appointment_type": "office_visit",
-  "source_note_date": "2025-09-15"
+  "source_note_dates": ["2025-08-29", "2025-09-15"]
 }
 ```
 
@@ -247,9 +249,9 @@ Resolver.
   Resolver precedence on merge is **asymmetric** (DD-017):
   `missed`/`cancelled` beat `attended`/`scheduled`/`unknown`; within
   negatives `missed > cancelled`; within positives
-  `attended > scheduled > unknown`; ties broken by `source_note_date`
-  recency. Replaces the earlier monotonic-up rule, which silently
-  upgraded `missed → attended`.
+  `attended > scheduled > unknown`; ties broken by recency of
+  `max(source_note_dates)`. Replaces the earlier monotonic-up rule,
+  which silently upgraded `missed → attended`.
 - `appointment_type`: `office_visit | follow_up | ime | fce | procedure |
   phone | telehealth`. Lets Q2's canned function filter (e.g., exclude
   phone calls from clinical visit counts).
@@ -259,9 +261,11 @@ Resolver.
   deterministic normalization (strip honorifics, degree suffixes,
   `& → and`). No fuzzy matching, no ±N day window. Replaces the
   earlier `provider` string + string-canonicalization heuristic.
-- `source_note_date` (DD-017): the note this event was extracted from;
-  used by the resolver as the recency tiebreaker within a status tier.
-  After merge it holds the latest of the merged group.
+- `source_note_dates` (DD-017): sorted tuple of every contributing
+  note date. The resolver uses `max(source_note_dates)` as the
+  recency tiebreaker within a status tier; the full tuple stays for
+  audit so you can trace a merged event back to every note that
+  fed it.
 
 ### 4.3 `return_to_work` — Q1 positive case
 
@@ -272,7 +276,7 @@ coordinator."*
 {
   "duty_type": "modified",
   "role": "scheduling coordinator",
-  "source_note_date": "2025-11-12",
+  "source_note_dates": ["2025-11-12"],
   "evidence_quote": "EE returned to modified duty on 11/10/25 as a scheduling coordinator"
 }
 ```
@@ -282,10 +286,10 @@ coordinator."*
 - A claim can have multiple `return_to_work` events (recurrence,
   post-surgical period, modified → full). **Q1 uses the first**;
   subsequent ones power future recurrence-duration queries.
-- `source_note_date` + `evidence_quote` are the debugging pair: when
-  the note was written and the substring inside it that justified the
-  extraction. On merge across notes, `source_note_date` is the latest
-  of the merged group.
+- `source_note_dates` + `evidence_quote` are the debugging pair:
+  the sorted tuple of contributing note dates and the substring(s)
+  that justified the extraction. On merge across notes the tuple
+  unions every contributor.
 - Injury-claim vs. illness-claim semantic differences (recovery vs.
   permanent accommodation vs. moved-away-from-exposure) are tracked at
   the **claim level** via `Claim.claim_type`. If a finer event-level
@@ -301,7 +305,7 @@ recorded. PPD 35% awarded."*
 {
   "reason": "closed_no_rtw",
   "context": "lump-sum settlement; PPD 35% awarded",
-  "source_note_date": "2026-04-12",
+  "source_note_dates": ["2026-04-12"],
   "evidence_quote": "Claim closed via lump-sum settlement on 4/12/26; no RTW recorded"
 }
 ```
@@ -311,9 +315,10 @@ recorded. PPD 35% awarded."*
 - At most one per claim. Mutually exclusive with `return_to_work` for
   most consumers — Q1's canned function checks for either, returning a
   discriminated union (`returned | never_returned | pending`).
-- `source_note_date` + `evidence_quote` are the debugging pair: the
-  date of the note that declared the terminal state and the verbatim
-  text justifying it.
+- `source_note_dates` + `evidence_quote` are the debugging pair:
+  every contributing note date and the verbatim text that justified
+  the terminal declaration. Most terminals are single-source, so the
+  tuple usually has one entry.
 - Modeled as an event, not a Claim column, so every future query
   (*"PTD rate by jurisdiction,"* *"average time-to-settlement for
   non-returners"*) reads it as a normal aggregation.

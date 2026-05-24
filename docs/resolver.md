@@ -91,7 +91,7 @@ affects the match key happens here.
   `missed`/`cancelled` beat `attended`/`scheduled`/`unknown`; within
   negatives `missed > cancelled`; within positives
   `attended > scheduled > unknown`; ties broken by the more recent
-  `source_note_date`. Replaces the earlier monotonic-up rule
+  `max(source_note_dates)`. Replaces the earlier monotonic-up rule
   (`attended > missed > cancelled > scheduled`), which silently
   upgraded `missed → attended` — see DD-017.
   (3) Reschedules: take the **latest** `scheduled_notice_date` before

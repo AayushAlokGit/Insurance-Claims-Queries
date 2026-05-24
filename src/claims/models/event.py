@@ -47,8 +47,10 @@ class _AttributesBase(BaseModel):
 class ReserveChangeAttributes(_AttributesBase):
     """Q3 payload. previous_amount and delta are derived by the
     Resolver after events are ordered (data-modeling.md §4.1).
-    `source_note_date` is the date of the note this event was
-    extracted from — paired with `evidence_quote` for debugging."""
+    `source_note_dates` is the sorted tuple of note dates that
+    contributed to this event — paired with `evidence_quote` for
+    debugging. Single-source events have one entry; merged events
+    have one per contributing note."""
 
     type: Literal["reserve_change"] = "reserve_change"
     bucket: str
@@ -56,7 +58,7 @@ class ReserveChangeAttributes(_AttributesBase):
     previous_amount: Decimal | None = None
     delta: Decimal | None = None
     author: str | None = None
-    source_note_date: date | None = None
+    source_note_dates: tuple[date, ...] = ()
     evidence_quote: str | None = None
 
 
@@ -67,11 +69,10 @@ class AppointmentAttributes(_AttributesBase):
     organizations involved in this encounter; the resolver merges
     by claim + encounter_date + party-set overlap. Empty list
     means no identifiable party (the merge falls to date alone).
-    `source_note_date` per DD-017: when this event was extracted
-    from a single note, the note's own date; used by the resolver
-    as a recency tiebreaker when multiple events for the same
-    encounter share a status tier. After merge it holds the latest
-    of the merged group."""
+    `source_note_dates` per DD-017: the sorted tuple of note dates
+    that contributed to this event. Single-source events have one
+    entry; merged events keep one per contributing note for audit.
+    The DD-017 recency tiebreaker uses `max(source_note_dates)`."""
 
     type: Literal["appointment"] = "appointment"
     parties: tuple[str, ...] = ()
@@ -81,7 +82,7 @@ class AppointmentAttributes(_AttributesBase):
     occurred_on: date | None = None
     status: AppointmentStatus
     appointment_type: AppointmentType | None = None
-    source_note_date: date | None = None
+    source_note_dates: tuple[date, ...] = ()
     evidence_quote: str | None = None
 
     @property
@@ -94,26 +95,27 @@ class AppointmentAttributes(_AttributesBase):
 
 
 class ReturnToWorkAttributes(_AttributesBase):
-    """Q1 positive case (data-modeling.md §4.3). `source_note_date`
-    is the date of the note this event was extracted from — paired
-    with `evidence_quote` for debugging."""
+    """Q1 positive case (data-modeling.md §4.3). `source_note_dates`
+    is the sorted tuple of note dates that contributed to this
+    event — paired with `evidence_quote` for debugging."""
 
     type: Literal["return_to_work"] = "return_to_work"
     duty_type: RTWDutyType
     role: str | None = None
-    source_note_date: date | None = None
+    source_note_dates: tuple[date, ...] = ()
     evidence_quote: str | None = None
 
 
 class RTWTerminalAttributes(_AttributesBase):
     """Q1 definitive negative — DD-011 (data-modeling.md §4.4).
-    `source_note_date` is the date of the note this event was
-    extracted from — paired with `evidence_quote` for debugging."""
+    `source_note_dates` is the sorted tuple of note dates that
+    contributed to this event — paired with `evidence_quote` for
+    debugging."""
 
     type: Literal["rtw_terminal"] = "rtw_terminal"
     reason: RTWTerminalReason
     context: str | None = None
-    source_note_date: date | None = None
+    source_note_dates: tuple[date, ...] = ()
     evidence_quote: str | None = None
 
 

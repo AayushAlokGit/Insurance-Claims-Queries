@@ -55,7 +55,7 @@ Use these when grepping for traces of a run or comparing outputs across runs. Pa
 | Ad-hoc script logs | `./logs/<script_name>/...` | E.g. `logs/try_appointment_llm/`. Convention: never flat under `logs/`. |
 | Sample claim notes (input) | `./sample_claim_notes/sample_claim_notes{1,2}.md` | The two sample inputs from `Exercise.md`. |
 | Ingested DB | `./sample_claim_notes/query_outputs/sample.db` | SQLite; rebuilt by the ingest script. |
-| Per-claim query output (JSON) | `./sample_claim_notes/query_outputs/<claim_id>.json` | One file per claim, containing all four queries. Sections are delimited by `=== q1 ===` etc. |
+| Per-claim query output (JSON) | `./sample_claim_notes/query_outputs/<claim_id>.json` | One file per claim, containing all four queries. Sections delimited by `=== q1 ===` etc. Regenerate via `python scripts/write_query_outputs.py --claim-id <id>` — the `query` CLI prints to stdout only, it does not write these files. |
 
 **Greppable log lines added for debugging Q2 / Q4 issues:**
 - Extractor stage: `extract note=<id> note_date=<d> by=<Extractor> :: appointment date=<d> kind=<scheduled|occurred> status=<s> parties=[...] evidence="..."` — one INFO line per emitted event.

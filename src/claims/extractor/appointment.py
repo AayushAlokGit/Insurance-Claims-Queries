@@ -71,6 +71,64 @@ def _party_supported_by_quote(party: str, quote: str) -> bool:
         return False
     return norm in quote.lower()
 
+
+# Relative-date markers: "yesterday", "today", "this morning",
+# "tomorrow", "last <weekday>". Accepted as evidence of a specific
+# date because the prompt instructs the LLM to resolve them from
+# the note's date. We trust that resolution.
+_REL_DATE_RE = re.compile(
+    r"\b(yesterday|today|tonight|this (?:morning|afternoon|evening)"
+    r"|tomorrow|last\s+(?:mon|tues?|wed(?:nes)?|thur?s?|fri|sat|sun)"
+    r"(?:day)?)\b",
+    re.IGNORECASE,
+)
+
+_MONTH_NAMES_FULL = (
+    "January", "February", "March", "April", "May", "June",
+    "July", "August", "September", "October", "November", "December",
+)
+_MONTH_NAMES_ABBR = (
+    "Jan", "Feb", "Mar", "Apr", "May", "Jun",
+    "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
+)
+
+
+def _date_surface_forms(d: date) -> list[str]:
+    """Every reasonable surface form of `d` we might see in the
+    note body: M/D, MM/DD, M-D-YY, M.D.YYYY, "August 11", "11
+    August", etc. Quote check is case-insensitive substring on
+    these forms."""
+    m, day = d.month, d.day
+    y2, y4 = d.year % 100, d.year
+    forms: list[str] = []
+    for sep in ("/", "-", "."):
+        forms.append(f"{m}{sep}{day}")
+        forms.append(f"{m:02d}{sep}{day:02d}")
+        for y in (y2, y4):
+            forms.append(f"{m}{sep}{day}{sep}{y}")
+            forms.append(f"{m:02d}{sep}{day:02d}{sep}{y}")
+    full = _MONTH_NAMES_FULL[m - 1]
+    abbr = _MONTH_NAMES_ABBR[m - 1]
+    for name in (full, abbr):
+        forms.append(f"{name} {day}")
+        forms.append(f"{day} {name}")
+        forms.append(f"{day}{name}")  # "11August" — rare but cheap
+    return forms
+
+
+def _date_supported_by_quote(d: date | None, quote: str) -> bool:
+    """The appointment_date `d` is supported iff (a) a relative
+    marker resolvable from note_date appears in the quote, OR (b)
+    some surface form of `d` appears in the quote. When `d` is
+    None, there is no claim to verify — return True (the resolver
+    will leave the event a singleton)."""
+    if d is None:
+        return True
+    if _REL_DATE_RE.search(quote):
+        return True
+    lower = quote.lower()
+    return any(f.lower() in lower for f in _date_surface_forms(d))
+
 # --- Prefilter ---------------------------------------------------
 
 # Status-verb branch. Catches the attended/missed/cancelled
@@ -193,6 +251,8 @@ DO NOT EXTRACT:
 
 DATE: an explicit date in the body → `appointment_date`. A relative phrase that names a specific day relative to the note date ("yesterday", "this morning", "last Friday") → compute from the note date. Vague phrases ("soon", "next month") → null.
 
+DATE-IN-QUOTE RULE (hard requirement): The `appointment_date` you set MUST be derivable from the `evidence_quote` you choose. Either the date appears literally in the quote (in any common form: "8/11", "08/11/25", "August 11", "11-Aug-2025") OR a relative marker that resolves to it appears ("yesterday", "today", "last Friday"). If the date in the body and the status/party context are in different sentences, you must EITHER (a) expand your quote to include both, OR (b) emit the event with `appointment_date: null`. Do not pair a date that lives outside your quote.
+
 DATE↔PARTY PAIRING: when a note mentions multiple appointments, do NOT reach across sentences to pair a date with a doctor. The date and the doctor must appear in the SAME context or clause for you to pair them. Otherwise leave `appointment_date` null or skip the event.
 
 NEGATIVE EVENTS (missed / cancelled) are STRICT: only emit when the note explicitly names BOTH the doctor/clinic AND the date in unambiguous proximity (same sentence preferred). If either is uncertain, omit. Over-emitting a missed/cancelled event corrupts status resolution downstream; under-emitting is recoverable.
@@ -262,6 +322,24 @@ class AppointmentExtractor:
         for appt in response.appointments:
             if not quote_in_body(appt.evidence_quote, note.body):
                 continue  # safety net — drop hallucinated quotes
+            if not _date_supported_by_quote(
+                appt.appointment_date, appt.evidence_quote
+            ):
+                # The LLM claimed a date that doesn't live in its
+                # own evidence quote — the date came from a
+                # different sentence. Null the date out and let
+                # the resolver keep it as a dateless singleton
+                # rather than asserting a (date, status, party)
+                # tuple we can't verify.
+                _log.info(
+                    "date-in-quote drop note=%s claimed_date=%s "
+                    "status=%s quote=\"%s\"",
+                    note.note_id,
+                    appt.appointment_date,
+                    appt.status,
+                    appt.evidence_quote.replace("\n", " ")[:80],
+                )
+                appt = appt.model_copy(update={"appointment_date": None})
             events.append(self._to_event(note, appt))
         return events
 

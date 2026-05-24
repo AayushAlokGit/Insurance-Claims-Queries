@@ -124,69 +124,48 @@ class AppointmentExtractionResponse(BaseModel):
     appointments: list[_ExtractedAppointment] = Field(default_factory=list)
 
 
-# --- Prompts -----------------------------------------------------
+# --- Prompt ------------------------------------------------------
 #
-# KNOWN FAILURE MODE — cross-appointment date/party mis-pairing.
-# When a single note discusses multiple appointments without
-# clean per-line attribution, the LLM tends to pair a doctor
-# with the nearest date in the note even when they refer to
-# different appointments. The DATE↔PARTY PAIRING and NEGATIVE
-# EVENTS rules below mitigate this by demanding same-sentence
-# proximity; the architectural fix (a second-pass reconciliation
-# extractor that sees the whole claim) is sketched in DD-017
-# "Known limitations" but not built — the cost is too high for a
-# ~1-row precision dip on Q2 across the sample claims.
-# Trade-off: under-emission is recoverable downstream; over-
-# emission propagates as wrong rows.
+# Per-note extraction is a permissive candidate generator under
+# DD-019: the per-claim reconciliation pass dedups and re-aligns
+# parties across notes. The prompt's job is precision of evidence,
+# not deduplication.
 
-_SYSTEM_PROMPT = """You extract APPOINTMENT events from a workers'-comp claim note. An appointment is a clinical encounter (or planned encounter) between the claimant and a healthcare provider. Judge by the body content, not by administrative wrapper lines.
+_SYSTEM_PROMPT = """You extract APPOINTMENT events from a workers'-comp claim note. An appointment is a clinical encounter — past, future, or missed — between the claimant and a healthcare provider.
 
 STATUS:
-- attended  — the visit happened. A clinical visit summary (date + provider + diagnosis/plan content) counts as attended even without an explicit "attended" verb.
+- attended  — the visit happened. A medical-record block (`Date of Appointment: X` followed by `Plan:` / clinical content) counts as attended even without an "attended" verb.
 - missed    — claimant did not attend / no-show / DNA / "unable to attend".
 - cancelled — cancelled or rescheduled before it could happen.
-- scheduled — a future appointment with a date.
+- scheduled — a future appointment with a specific date.
 
-If one note recaps multiple historical visits, emit one entry per appointment.
+If a note recaps multiple visits (e.g. a Resolution Strategy `SINCE LAST ACTION PLAN` or `NEXT APPOINTMENTS` section), emit one entry per visit — each entry stands on its own under the proximity rule below.
+
+DATE: explicit date → `appointment_date`. A relative phrase that resolves from the note date ("yesterday", "this morning", "last Friday") → compute it. Vague phrases ("soon", "next month", "PRN", "around <date>") → null.
+
+PROXIMITY: one `evidence_quote` per event must contain ALL of (a) the appointment date (literal, relative, or a templated `Date of Appointment:` / `Next Office Visit:` header) AND (b) at least one named party OR the templated medical-record block (which implies the visit) AND (c) an action verb or status word (`attended`, `missed`, `cancelled`, `scheduled`, `visited`, `saw`, `follow-up`, or the templated header). If you cannot find ONE verbatim substring containing all three, emit nothing for that mention — do NOT reach across sentences to assemble (date, party, status) from disjoint clauses. Under-emission is recoverable downstream; over-emission with cross-attributed parties is not.
 
 DO NOT EXTRACT:
-- Paperwork / communications with no visit summary attached (emails, texts, calls, faxes, signed forms, records receipts).
-- Orders or referrals not yet performed ("MRI ordered", "referral placed").
-- Instructions or questions ("patient to follow up around DATE", "checking whether she attended").
+- Pure communications without a visit-action verb (emails, texts, fax cover sheets, records-receipt notices).
+- Care assignments and orders ("Dr. Harmon agreed to assume care", "referred to pain management", "MRI ordered") — these establish treatment, not a dated visit.
+- Status notations in recap lists ("Dr. Vega (Neurology) — MMI", "Dr. Sinclair, ophthalmology: no further care needed") — these record patient state, not a visit.
+- Hospital inpatient days (consecutive daily evals during an admission). One inpatient stay is not many appointments.
+- Mentions of a provider only in the diagnosis line, history, or plan that don't pair with a date in the same clause.
 
 {evidence_guidance}
 
-DATE: an explicit date in the body → `appointment_date`. A relative phrase that names a specific day relative to the note date ("yesterday", "this morning", "last Friday") → compute from the note date. Vague phrases ("soon", "next month") → null.
-
-DATE-IN-QUOTE RULE (hard requirement): The `appointment_date` you set MUST be derivable from the `evidence_quote` you choose. Either the date appears literally in the quote (in any common form: "8/11", "08/11/25", "August 11", "11-Aug-2025") OR a relative marker that resolves to it appears ("yesterday", "today", "last Friday"). If the date in the body and the status/party context are in different sentences, you must EITHER (a) expand your quote to include both, OR (b) emit the event with `appointment_date: null`. Do not pair a date that lives outside your quote.
-
-DATE↔PARTY PAIRING: when a note mentions multiple appointments, do NOT reach across sentences to pair a date with a doctor. The date and the doctor must appear in the SAME context or clause for you to pair them. Otherwise leave `appointment_date` null or skip the event.
-
-NEGATIVE EVENTS (missed / cancelled) are STRICT: only emit when the note explicitly names BOTH the doctor/clinic AND the date in unambiguous proximity (same sentence preferred). If either is uncertain, omit. Over-emitting a missed/cancelled event corrupts status resolution downstream; under-emitting is recoverable.
-
-PARTIES — list every named individual and organization party to THIS specific appointment:
-- The attending clinician(s) — must be a named person, not a role.
-- The facility / clinic / hospital / practice where it occurs — must be a named org, not a generic word.
-- A case manager, field nurse, or interpreter PHYSICALLY PRESENT at the encounter, ONLY if personally named in the note.
-
-PARTY-IN-QUOTE RULE (hard requirement): Every party you list MUST appear by name inside the `evidence_quote` you choose for that same appointment. If your evidence_quote does not contain the party's name, do not list that party. Choose a longer or different verbatim substring of the note that includes BOTH the date (or a clear date referent like "yesterday") AND every party — or omit the party / event.
-
-EXAMPLE of joint-reference failure (do NOT do this):
-> Body: "Dr. Farano wanted to see her. Unfortunately, she was unable to attend her appointments scheduled for 08/11 and 08/13."
-> Wrong: emit two events tagging 08/11 with Farano and 08/13 with Farano, status=missed.
-> Wrong because: the 08/11 and 08/13 sentence does not name a doctor; Dr. Farano is in a different sentence and may belong to one, both, or neither date.
-> Correct: either (a) emit two events with parties: [] (date known, party not attributable in the same clause), or (b) emit nothing for the dates whose provider is ambiguous.
+PARTIES — list every named individual and organization that the evidence_quote shows is party to THIS visit:
+- Attending clinician(s): named persons only.
+- Facility / clinic / hospital: named organizations only.
 
 DO NOT put in `parties`:
-- The claimant under any label — pronouns ("she", "he"), role labels ("claimant", "patient", "EE", "IE", "IW", "HR"), or pseudonyms ("Patient A", "the IW", "Subject").
+- The claimant under any label — pronouns, role labels ("claimant", "patient", "EE", "IE", "IW", "HR"), or pseudonyms ("Patient A", "the IW", "Subject").
+- Specialty names alone ("ophthalmology", "neurology", "ortho", "spine", "pain mgmt"). Specialty is not a name.
+- Generic phrases or unnamed roles ("the doctor", "the office", "FCM", "TCM", "field nurse", "case manager", "interpreter") standing alone.
+- Single-letter abbreviations or placeholders ("F", "C", "Dr. F").
 - Referring providers named only in history / treatment plan / referrals.
-- Other clinicians mentioned only in the diagnosis line.
-- Specialty names ("ophthalmology", "neurology"). Specialty is not a party.
-- Generic phrases ("office", "the doctor", "the field nurse").
-- Unnamed roles ("FCM", "TCM", "field nurse", "case manager", "interpreter") on their own.
-- Single-letter abbreviations or placeholders ("F", "C", "Dr. F", "Dr. _").
 
-Each entry names ONE entity. Strip honorifics ("Dr.", "Mr."), degree suffixes (", MD", ", DO"), and location suffixes ("'s office", "at <clinic>"). A doctor and the clinic they work at are TWO entries, not one. Emit an empty list if no identifiable party is named — never invent one.
+Strip honorifics ("Dr.", "Mr."), degree suffixes (", MD", ", DO"), and location suffixes ("'s office", "at <clinic>"). A clinician and the clinic they work at are TWO entries, not one. Empty list if no named party appears — never invent one.
 
 No appointment in the note → return appointments: []. Do not infer status from silence.""".format(
     evidence_guidance=EVIDENCE_QUOTE_GUIDANCE

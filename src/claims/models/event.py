@@ -62,12 +62,13 @@ class ReserveChangeAttributes(_AttributesBase):
     evidence_quote: str | None = None
 
 
-class AppointmentEvidence(_AttributesBase):
-    """One (note_date, quote) pair contributing to an appointment.
+class EventEvidence(_AttributesBase):
+    """One (note_date, quote) pair contributing to a merged event.
 
-    Merged appointments keep one entry per contributing note so
-    provenance survives reconciliation. Single-source events have
-    a one-element tuple."""
+    Used by all event types whose merge unions evidence across
+    contributing notes (appointments — DD-020; return_to_work and
+    rtw_terminal — same pattern, extended scope). Single-source
+    events have a one-element tuple."""
 
     note_date: date
     quote: str
@@ -92,7 +93,7 @@ class AppointmentAttributes(_AttributesBase):
     occurred_on: date | None = None
     status: AppointmentStatus
     appointment_type: AppointmentType | None = None
-    evidence: tuple[AppointmentEvidence, ...] = ()
+    evidence: tuple[EventEvidence, ...] = ()
 
     @property
     def source_note_dates(self) -> tuple[date, ...]:
@@ -111,28 +112,44 @@ class AppointmentAttributes(_AttributesBase):
 
 
 class ReturnToWorkAttributes(_AttributesBase):
-    """Q1 positive case (data-modeling.md §4.3). `source_note_dates`
-    is the sorted tuple of note dates that contributed to this
-    event — paired with `evidence_quote` for debugging."""
+    """Q1 positive case (data-modeling.md §4.3). `evidence` holds
+    `(note_date, quote)` pairs — one per contributing note — so
+    merged events keep every contributor's provenance instead of
+    dropping all but one. `source_note_dates` and `evidence_quote`
+    survive as derived properties for callers that read them."""
 
     type: Literal["return_to_work"] = "return_to_work"
     duty_type: RTWDutyType
     role: str | None = None
-    source_note_dates: tuple[date, ...] = ()
-    evidence_quote: str | None = None
+    evidence: tuple[EventEvidence, ...] = ()
+
+    @property
+    def source_note_dates(self) -> tuple[date, ...]:
+        return tuple(sorted({e.note_date for e in self.evidence}))
+
+    @property
+    def evidence_quote(self) -> str | None:
+        return self.evidence[0].quote if self.evidence else None
 
 
 class RTWTerminalAttributes(_AttributesBase):
     """Q1 definitive negative — DD-011 (data-modeling.md §4.4).
-    `source_note_dates` is the sorted tuple of note dates that
-    contributed to this event — paired with `evidence_quote` for
-    debugging."""
+    `evidence` holds `(note_date, quote)` pairs — one per
+    contributing note. `source_note_dates` and `evidence_quote`
+    survive as derived properties."""
 
     type: Literal["rtw_terminal"] = "rtw_terminal"
     reason: RTWTerminalReason
     context: str | None = None
-    source_note_dates: tuple[date, ...] = ()
-    evidence_quote: str | None = None
+    evidence: tuple[EventEvidence, ...] = ()
+
+    @property
+    def source_note_dates(self) -> tuple[date, ...]:
+        return tuple(sorted({e.note_date for e in self.evidence}))
+
+    @property
+    def evidence_quote(self) -> str | None:
+        return self.evidence[0].quote if self.evidence else None
 
 
 EventAttributes = Annotated[

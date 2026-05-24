@@ -37,7 +37,7 @@ from claims.llm import StructuredLLM, quote_in_body
 from claims.llm.base import LLMError
 from claims.models import (
     AppointmentAttributes,
-    AppointmentEvidence,
+    EventEvidence,
     Event,
     Note,
 )
@@ -245,7 +245,7 @@ class AppointmentExtractor:
             parties.append(stripped)
 
         evidence = (
-            AppointmentEvidence(
+            EventEvidence(
                 note_date=note.note_date, quote=appt.evidence_quote
             ),
         )

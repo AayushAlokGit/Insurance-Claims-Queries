@@ -17,7 +17,7 @@ from pydantic import BaseModel, ConfigDict, Field
 from claims.extractor._evidence import EVIDENCE_QUOTE_GUIDANCE
 from claims.llm import StructuredLLM, quote_in_body
 from claims.llm.base import LLMError
-from claims.models import Event, Note, RTWTerminalAttributes
+from claims.models import Event, EventEvidence, Note, RTWTerminalAttributes
 
 _RE_TERMINAL_SIGNAL = re.compile(
     r"\b(never\s+returned|permanent\s+total|PTD|deceased|passed\s+away"
@@ -115,8 +115,12 @@ class RtwTerminalExtractor:
                 attributes=RTWTerminalAttributes(
                     reason=payload.reason,
                     context=payload.context,
-                    source_note_dates=(note.note_date,),
-                    evidence_quote=payload.evidence_quote,
+                    evidence=(
+                        EventEvidence(
+                            note_date=note.note_date,
+                            quote=payload.evidence_quote,
+                        ),
+                    ),
                 ),
                 extraction_method="llm",
             )

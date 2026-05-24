@@ -10,7 +10,7 @@ from decimal import Decimal
 from sqlite3 import Connection
 from statistics import median
 
-from claims.models import AppointmentEvidence
+from claims.models import EventEvidence
 from claims.query.types import (
     Q1NeverReturned,
     Q1Pending,
@@ -54,10 +54,9 @@ def q1_return_to_work(conn: Connection, claim_id: str) -> Q1Result:
         SELECT event_id,
                event_date,
                extraction_method,
-               json_extract(attributes, '$.duty_type')         AS duty_type,
-               json_extract(attributes, '$.role')              AS role,
-               json_extract(attributes, '$.source_note_dates') AS source_note_dates,
-               json_extract(attributes, '$.evidence_quote')    AS evidence_quote
+               json_extract(attributes, '$.duty_type') AS duty_type,
+               json_extract(attributes, '$.role')      AS role,
+               json_extract(attributes, '$.evidence')  AS evidence
         FROM event
         WHERE claim_id = ?
           AND event_type = 'return_to_work'
@@ -75,8 +74,7 @@ def q1_return_to_work(conn: Connection, claim_id: str) -> Q1Result:
             role=rtw["role"],
             event_id=rtw["event_id"],
             extraction_method=rtw["extraction_method"],
-            source_note_dates=_parse_dates(rtw["source_note_dates"]),
-            evidence_quote=rtw["evidence_quote"],
+            evidence=_parse_evidence(rtw["evidence"]),
         )
 
     term = conn.execute(
@@ -84,10 +82,9 @@ def q1_return_to_work(conn: Connection, claim_id: str) -> Q1Result:
         SELECT event_id,
                event_date,
                extraction_method,
-               json_extract(attributes, '$.reason')            AS reason,
-               json_extract(attributes, '$.context')           AS context,
-               json_extract(attributes, '$.source_note_dates') AS source_note_dates,
-               json_extract(attributes, '$.evidence_quote')    AS evidence_quote
+               json_extract(attributes, '$.reason')   AS reason,
+               json_extract(attributes, '$.context')  AS context,
+               json_extract(attributes, '$.evidence') AS evidence
         FROM event
         WHERE claim_id = ?
           AND event_type = 'rtw_terminal'
@@ -103,8 +100,7 @@ def q1_return_to_work(conn: Connection, claim_id: str) -> Q1Result:
             context=term["context"],
             event_id=term["event_id"],
             extraction_method=term["extraction_method"],
-            source_note_dates=_parse_dates(term["source_note_dates"]),
-            evidence_quote=term["evidence_quote"],
+            evidence=_parse_evidence(term["evidence"]),
         )
 
     days_open = (date.today() - dol).days
@@ -125,7 +121,7 @@ def _parse_parties(raw: str | None) -> list[str]:
     return [str(x) for x in loaded if isinstance(x, str)]
 
 
-def _parse_evidence(raw: str | None) -> list[AppointmentEvidence]:
+def _parse_evidence(raw: str | None) -> list[EventEvidence]:
     """Decode the stored `evidence` JSON array into typed pairs.
     Malformed entries are silently skipped."""
     if raw is None:
@@ -136,13 +132,13 @@ def _parse_evidence(raw: str | None) -> list[AppointmentEvidence]:
         return []
     if not isinstance(loaded, list):
         return []
-    out: list[AppointmentEvidence] = []
+    out: list[EventEvidence] = []
     for x in loaded:
         if not isinstance(x, dict):
             continue
         try:
             out.append(
-                AppointmentEvidence(
+                EventEvidence(
                     note_date=date.fromisoformat(x["note_date"]),
                     quote=str(x["quote"]),
                 )

@@ -25,7 +25,7 @@ from claims.extractor.appointment_reconciliation import (
     _precluster,
     reconcile_appointments,
 )
-from claims.models import AppointmentAttributes, AppointmentEvidence, Event
+from claims.models import AppointmentAttributes, EventEvidence, Event
 
 
 # --- _normalize_party ------------------------------------------
@@ -69,7 +69,7 @@ def _appt(
 ) -> Event:
     anchor = occurred_on or scheduled_for_date or date(2025, 1, 1)
     evidence = tuple(
-        AppointmentEvidence(note_date=nd, quote=evidence_quote or "")
+        EventEvidence(note_date=nd, quote=evidence_quote or "")
         for nd in source_note_dates
     )
     return Event(

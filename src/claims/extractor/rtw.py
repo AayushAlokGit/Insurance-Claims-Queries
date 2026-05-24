@@ -21,7 +21,7 @@ from pydantic import BaseModel, ConfigDict, Field
 from claims.extractor._evidence import EVIDENCE_QUOTE_GUIDANCE
 from claims.llm import StructuredLLM, quote_in_body
 from claims.llm.base import LLMError
-from claims.models import Event, Note, ReturnToWorkAttributes
+from claims.models import Event, EventEvidence, Note, ReturnToWorkAttributes
 
 _RE_RTW_SIGNAL = re.compile(
     r"\b(return(ed|ing)?\s+to\s+work|RTW|light\s+duty"
@@ -122,8 +122,12 @@ class ReturnToWorkExtractor:
                 attributes=ReturnToWorkAttributes(
                     duty_type=payload.duty_type,
                     role=payload.role,
-                    source_note_dates=(note.note_date,),
-                    evidence_quote=payload.evidence_quote,
+                    evidence=(
+                        EventEvidence(
+                            note_date=note.note_date,
+                            quote=payload.evidence_quote,
+                        ),
+                    ),
                 ),
                 extraction_method="llm",
             )

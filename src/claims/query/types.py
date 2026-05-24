@@ -10,7 +10,7 @@ from typing import Annotated, Literal, Union
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from claims.models import AppointmentEvidence
+from claims.models import EventEvidence
 
 # --- Q1 — discriminated union ----------------------------------
 
@@ -25,8 +25,7 @@ class Q1Returned(BaseModel):
     role: str | None = None
     event_id: str | None = None
     extraction_method: str | None = None
-    source_note_dates: list[date] = Field(default_factory=list)
-    evidence_quote: str | None = None
+    evidence: list[EventEvidence] = Field(default_factory=list)
 
 
 class Q1NeverReturned(BaseModel):
@@ -37,8 +36,7 @@ class Q1NeverReturned(BaseModel):
     context: str | None = None
     event_id: str | None = None
     extraction_method: str | None = None
-    source_note_dates: list[date] = Field(default_factory=list)
-    evidence_quote: str | None = None
+    evidence: list[EventEvidence] = Field(default_factory=list)
 
 
 class Q1Pending(BaseModel):
@@ -71,7 +69,7 @@ class Q2Appointment(BaseModel):
     appointment_type: str | None
     event_id: str | None = None
     extraction_method: str | None = None
-    evidence: list[AppointmentEvidence] = Field(default_factory=list)
+    evidence: list[EventEvidence] = Field(default_factory=list)
 
 
 class Q2Result(BaseModel):
@@ -127,7 +125,7 @@ class Q4Visit(BaseModel):
     on_time_delta_days: int
     event_id: str | None = None
     extraction_method: str | None = None
-    evidence: list[AppointmentEvidence] = Field(default_factory=list)
+    evidence: list[EventEvidence] = Field(default_factory=list)
 
 
 class Q4Distribution(BaseModel):

@@ -14,9 +14,9 @@ Role is preserved by longest-form-wins."""
 
 from __future__ import annotations
 
-from datetime import date, timedelta
+from datetime import date
 
-from claims.models import Event, ReturnToWorkAttributes
+from claims.models import Event, EventEvidence, ReturnToWorkAttributes
 
 _DATE_WINDOW_DAYS = 7
 
@@ -26,21 +26,27 @@ def _merge(events: list[Event]) -> Event:
     base = survivor.attributes
     assert isinstance(base, ReturnToWorkAttributes)
     role = base.role
-    all_note_dates: set[date] = set(base.source_note_dates)
+    evidence_set: set[tuple[date, str]] = {
+        (e.note_date, e.quote) for e in base.evidence
+    }
     for ev in events[1:]:
         attrs = ev.attributes
         assert isinstance(attrs, ReturnToWorkAttributes)
         if attrs.role and (role is None or len(attrs.role) > len(role)):
             role = attrs.role
-        all_note_dates.update(attrs.source_note_dates)
+        evidence_set.update((e.note_date, e.quote) for e in attrs.evidence)
     if len(events) == 1:
         return survivor
+    merged_evidence = tuple(
+        EventEvidence(note_date=nd, quote=q)
+        for nd, q in sorted(evidence_set, key=lambda p: (p[0], p[1]))
+    )
     return survivor.model_copy(
         update={
             "attributes": base.model_copy(
                 update={
                     "role": role,
-                    "source_note_dates": tuple(sorted(all_note_dates)),
+                    "evidence": merged_evidence,
                 }
             ),
             "extraction_method": "merged",

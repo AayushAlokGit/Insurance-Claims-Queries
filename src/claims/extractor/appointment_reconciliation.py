@@ -29,7 +29,7 @@ from claims.llm import StructuredLLM
 from claims.llm.base import LLMError
 from claims.models import (
     AppointmentAttributes,
-    AppointmentEvidence,
+    EventEvidence,
     AppointmentStatus,
     Event,
 )
@@ -251,7 +251,7 @@ def reconcile_appointments(
         # Union evidence pairs across contributors, dedup by
         # (note_date, quote). Sort by note_date for stable output.
         seen_evidence: set[tuple[date, str]] = set()
-        evidence_items: list[AppointmentEvidence] = []
+        evidence_items: list[EventEvidence] = []
         for ev in cluster:
             for item in ev.attributes.evidence:  # type: ignore[union-attr]
                 key = (item.note_date, item.quote)

@@ -26,6 +26,7 @@ Numbered, accepted design decisions. `DESIGN.md` is the polished spec these feed
 | DD-020 | Appointment evidence is `(note_date, quote)` pairs | Accepted | 2026-05-24 |
 | DD-021 | Appointments use per-note + reconciliation, not whole-claim LLM | Accepted | 2026-05-24 |
 | DD-022 | RTW resolver merges within a ±7-day window per `(claim_id, duty_type)` | Accepted | 2026-05-24 |
+| DD-023 | Widen `(note_date, quote)` evidence pairs to RTW + RTW-terminal; rename `AppointmentEvidence` → `EventEvidence` | Accepted | 2026-05-24 |
 
 ---
 
@@ -206,6 +207,13 @@ Production uses M1. The whole-claim script is kept as a comparison harness. Per-
 Identity-merge on `(claim_id, event_date, duty_type)` kept duplicates when the LLM's per-note date math drifted (claim 1: 11/10 + 11/11 events for the same return). Replace with greedy clustering on `event_date ± 7 days` within `(claim_id, duty_type)`; survivor = earliest event_date (matches Q1's precedence). Deterministic, no LLM — RTW has 0–2 events per claim with narrow disagreement axes, so a DD-019-style reconciliation is overkill.
 
 **Rejected.** Per-claim LLM reconciliation (wrong tool for the scale). Whole-claim LLM call for Q1 — tested in `scripts/RtwScripts/`; on claim 2 it emitted `returned` from an HR *request* ("HR Director has requested clmt RTW on Monday, 8/25"), violating the strict-evidence rule. Same DD-021 lesson, opposite direction (over-emission vs under-recall).
+
+---
+
+## DD-023 — Widen `(note_date, quote)` evidence pairs to RTW + RTW-terminal
+**Accepted · 2026-05-24**
+
+DD-020 scoped structured `evidence: tuple[EventEvidence, ...]` to appointments only. After DD-022 collapsed two duplicate RTW events on claim 1 into one merged event, the surviving event's single `evidence_quote` dropped four of five contributing notes' quotes — the same auditability hole DD-020 fixed for appointments, now visible for RTW. Extend the same shape to `ReturnToWorkAttributes` and `RTWTerminalAttributes`; rename `AppointmentEvidence` → `EventEvidence` since the type is generic. `source_note_dates` and `evidence_quote` survive as derived `@property`s. The resolver `_merge` unions evidence deterministically (dedup by `(note_date, quote)`, sort by `note_date`); the per-note extractors emit one-element tuples. Q1 output (`Q1Returned`, `Q1NeverReturned`) ships the full evidence list in place of `evidence_quote` + `source_note_dates`. Reserve-change events untouched — they aren't merged across notes the same way and the gain doesn't yet justify the schema churn (DD-012 YAGNI).
 
 ---
 

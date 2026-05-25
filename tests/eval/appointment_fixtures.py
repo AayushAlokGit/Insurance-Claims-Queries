@@ -216,6 +216,45 @@ A5_DOT_SEPARATED_DATE_BULLET_STYLE = Fixture(
 )
 
 
+A7_RECORDS_RECEIPT_PREFIX_THEN_TEMPLATED = Fixture(
+    name="A7-records-receipt-prefix-then-templated",
+    note_date=date(2025, 11, 14),
+    activity="Investigation",
+    body=(
+        "Note: TCM received medical records. Reviewed and saved to file.\n"
+        "---Date of Appointment: 11-14-25\n"
+        "Next Office Visit: PRN\n"
+        "Name of physician: Dr. Harmon\n"
+        "Clinic: Orthopedic & Spine Associates\n"
+        "Specialty: Spine\n"
+        "Diagnosis & Assessment: Anterior cord syndrome predominating "
+        "over central cord syndrome at C4-5 and C5-6. She has reached "
+        "a plateau in her neurological recovery.\n"
+        "Plan: Placing her at maximum medical improvement effective today. "
+        "Released to sedentary modified duty.\n"
+        "Work Status: Modified duty\n"
+        "MMI Date: 11-14-25"
+    ),
+    expected=(
+        ExpectedCandidate(
+            date=date(2025, 11, 14),
+            status="attended",
+            parties_substrings=("Harmon", "Orthopedic"),
+            kind="occurred",
+        ),
+    ),
+    notes=(
+        "Real claim 1 pattern. The 'TCM received medical records' preamble "
+        "looks like a records-receipt notice (matches the prompt's "
+        "DO NOT EXTRACT category), but is followed by a templated "
+        "medical-record block that IS the actual encounter. The LLM "
+        "currently returns empty for the whole note — the receipt preamble "
+        "preempts the templated block. Fix requires an exception to the "
+        "records-receipt rejection rule."
+    ),
+)
+
+
 A6_MULTI_BLOCK_SCHEDULED_AND_OCCURRED = Fixture(
     name="A6-multi-block-occurred-and-next",
     note_date=date(2025, 4, 10),
@@ -738,6 +777,7 @@ ALL_FIXTURES: tuple[Fixture, ...] = (
     A4_EMG_WITH_DICTATION_CONFUSION,
     A5_DOT_SEPARATED_DATE_BULLET_STYLE,
     A6_MULTI_BLOCK_SCHEDULED_AND_OCCURRED,
+    A7_RECORDS_RECEIPT_PREFIX_THEN_TEMPLATED,
     B1_PAST_TENSE_PROSE,
     B2_FIRST_PERSON_FIELD_NURSE,
     B3_RETROSPECTIVE_OMNIBUS,

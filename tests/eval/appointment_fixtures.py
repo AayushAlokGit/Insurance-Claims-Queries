@@ -255,6 +255,39 @@ A7_RECORDS_RECEIPT_PREFIX_THEN_TEMPLATED = Fixture(
 )
 
 
+A8_PORTAL_REVIEW_PREAMBLE_THEN_TEMPLATED = Fixture(
+    name="A8-portal-review-preamble-then-templated",
+    note_date=date(2025, 5, 22),
+    activity="Investigation",
+    body=(
+        "Note: TCM reviewed PT notes on OCCM portal. Saved to file.\n"
+        "--Date of Appointment: 5-10-25\n"
+        "Clinic: Valley PT Group\n"
+        "Specialty: Physical Therapy\n"
+        "Current complaints: Patient c/o tightness in neck and upper back area. "
+        "Reports pain 8-9/10 on cervical spine and upper back. C/o pain in lower "
+        "back area. Has difficulty with prolonged standing. "
+        "Assessment: Patient continues to show improvement with physical therapy. "
+        "Patient tolerated treatment and exercises today."
+    ),
+    expected=(
+        ExpectedCandidate(
+            date=date(2025, 5, 10),
+            status="attended",
+            parties_substrings=("Valley PT",),
+            kind="occurred",
+        ),
+    ),
+    notes=(
+        "Real claim 1 pattern (line 399-404). Two variations from A7: "
+        "(a) preamble verb is 'reviewed ... on OCCM portal' rather than "
+        "'received medical records', and (b) only TWO leading dashes on "
+        "the `Date of Appointment` line, not three. Both must still "
+        "trigger the templated-block-is-attended rule."
+    ),
+)
+
+
 A6_MULTI_BLOCK_SCHEDULED_AND_OCCURRED = Fixture(
     name="A6-multi-block-occurred-and-next",
     note_date=date(2025, 4, 10),
@@ -778,6 +811,7 @@ ALL_FIXTURES: tuple[Fixture, ...] = (
     A5_DOT_SEPARATED_DATE_BULLET_STYLE,
     A6_MULTI_BLOCK_SCHEDULED_AND_OCCURRED,
     A7_RECORDS_RECEIPT_PREFIX_THEN_TEMPLATED,
+    A8_PORTAL_REVIEW_PREAMBLE_THEN_TEMPLATED,
     B1_PAST_TENSE_PROSE,
     B2_FIRST_PERSON_FIELD_NURSE,
     B3_RETROSPECTIVE_OMNIBUS,

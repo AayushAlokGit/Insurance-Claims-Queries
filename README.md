@@ -31,12 +31,17 @@ Copy-Item .env.example .env
 
 # 4. Ingest a sample claim
 py -3.12 -m uv run python -m claims ingest `
-    --file sample_claim_notes/sample_claim_notes1.md `
-    --db demo.db
+    --file sample_claim_notes/sample_claim_notes1.md
 
 # 5. Answer a query
-py -3.12 -m uv run python -m claims query q1 --claim-id 1-29RT --db demo.db
+py -3.12 -m uv run python -m claims query q1 --claim-id 1-29RT
 ```
+
+By default, ingest writes to
+`sample_claim_notes/query_outputs/<provider>-<model>/sample.db` and
+queries read from the same path — so swapping `LLM_PROVIDER` in `.env`
+keeps each model's runs in its own directory. Pass `--db <path>` to
+override.
 
 Sample output for step 5:
 
@@ -107,7 +112,8 @@ sample_claim_notes/X.md
         │              (parties-set merge on exact encounter_date; DD-016)
         │
         ▼
-   SQLite (claims.db)  Claim + Event with JSON1 attributes
+   SQLite              Claim + Event with JSON1 attributes
+   (per-provider db)
         │
         ▼
    Query layer         Q1 – Q4 canned functions
@@ -193,7 +199,10 @@ claims query {q1,q2,q3,q4} --claim-id ID [--db PATH]
 ```
 
 Defaults:
-- `--db claims.db`
+- `--db` → `sample_claim_notes/query_outputs/<provider>-<model>/sample.db`
+  (e.g. `.../google-gemini-2.5-flash-lite/sample.db`). Falls back to
+  `.../rule-only/sample.db` under `--no-llm`. Both `ingest` and `query`
+  resolve the same path from current env.
 - `--workers 4` (parallel extraction across notes)
 - `--provider` → `LLM_PROVIDER` env var → `google`
 
@@ -244,7 +253,7 @@ py -3.12 -m uv run python scripts/try_appointment_llm.py --claim 1 --limit 3
 py -3.12 -m uv run python scripts/try_rtw_llm.py --claim 1 --limit 5
 
 # Summarize all four queries against a populated DB in human format
-py -3.12 -m uv run python scripts/summarize_queries.py --claim-id 1-29RT --db demo.db
+py -3.12 -m uv run python scripts/summarize_queries.py --claim-id 1-29RT
 ```
 
 ---

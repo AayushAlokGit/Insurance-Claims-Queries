@@ -53,7 +53,7 @@ Use these when grepping for traces of a run or comparing outputs across runs. Pa
 | Per-query run logs | `./logs/claims_query/<ts>-<claim_id>-q<N>.log` | One file per `(claim, query)` pair. |
 | Ad-hoc script logs | `./logs/<script_name>/...` | E.g. `logs/try_appointment_llm/`. Convention: never flat under `logs/`. |
 | Sample claim notes (input) | `./sample_claim_notes/sample_claim_notes{1,2}.md` | The two sample inputs from `Exercise.md`. |
-| Ingested DB | `./sample_claim_notes/query_outputs/sample.db` | SQLite; rebuilt by the ingest script. |
+| Ingested DB | `./sample_claim_notes/query_outputs/<provider>-<model>/sample.db` | SQLite; rebuilt by the ingest script. One DB per LLM (or `.../rule-only/sample.db` under `--no-llm`). |
 | Per-claim query output (JSON) | `./sample_claim_notes/query_outputs/<claim_id>.json` | One file per claim, containing all four queries. Sections delimited by `=== q1 ===` etc. Regenerate via `python scripts/write_query_outputs.py --claim-id <id>` — the `query` CLI prints to stdout only, it does not write these files. |
 
 **Greppable log lines for debugging the appointment pipeline (DD-019):**

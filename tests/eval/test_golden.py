@@ -44,7 +44,7 @@ from tests.eval.comparators import (
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 GOLDEN_DIR = REPO_ROOT / "tests" / "golden"
-SAVED_OUTPUTS_DIR = REPO_ROOT / "sample_claim_notes" / "query_outputs"
+SAVED_OUTPUTS_ROOT = REPO_ROOT / "sample_claim_notes" / "query_outputs"
 CLAIM_FILES: dict[str, Path] = {
     "1-29RT": REPO_ROOT / "sample_claim_notes" / "sample_claim_notes1.md",
     "2-248KR": REPO_ROOT / "sample_claim_notes" / "sample_claim_notes2.md",
@@ -55,17 +55,27 @@ pytestmark = pytest.mark.eval
 
 def _load_saved_outputs() -> dict[str, dict]:
     """Read the on-disk query JSONs as the actual-output side of the
-    comparison. Caller is responsible for keeping these current via
+    comparison. Resolves the provider/model slug from env so the
+    outputs read match what `write_query_outputs.py` writes by default.
+    Caller is responsible for keeping these current via
     `scripts/write_query_outputs.py`."""
+    from dotenv import load_dotenv
+
+    from claims.llm import provider_model_slug
+
+    load_dotenv()
+    slug = provider_model_slug()
+    saved_dir = SAVED_OUTPUTS_ROOT / slug
+
     out: dict[str, dict] = {}
     for claim_id in CLAIM_FILES:
-        path = SAVED_OUTPUTS_DIR / f"{claim_id}.json"
+        path = saved_dir / f"{claim_id}.json"
         if not path.exists():
             pytest.fail(
                 f"--saved-outputs requested but {path} does not exist; "
                 f"run `python scripts/write_query_outputs.py --claim-id {claim_id}` first"
             )
-        _log.info("load saved :: claim=%s path=%s", claim_id, path)
+        _log.info("load saved :: claim=%s slug=%s path=%s", claim_id, slug, path)
         out[claim_id] = parse_query_outputs(
             path.read_text(encoding="utf-8")
         )

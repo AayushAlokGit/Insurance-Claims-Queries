@@ -33,7 +33,13 @@ from claims.extractor import (
     reconcile_appointments,
     run_all,
 )
-from claims.llm import get_client
+from claims.llm import (
+    get_client,
+    provider_model_slug,
+    resolve_model,
+    resolve_provider,
+    rule_only_slug,
+)
 from claims.loader import infer_claim_metadata, parse_file
 from claims.log_config import setup_logging
 from claims.models import Claim
@@ -52,6 +58,16 @@ from claims.store import (
     insert_event,
 )
 
+# Per-slug DB layout: each (provider, model) combination gets its own
+# SQLite file under `sample_claim_notes/query_outputs/<slug>/sample.db`,
+# so re-ingesting with a different LLM doesn't clobber prior results.
+# Callers can still override with `--db <path>` for ad-hoc work.
+_QUERY_OUTPUTS_ROOT = Path("sample_claim_notes") / "query_outputs"
+
+
+def _default_db_path(slug: str) -> Path:
+    return _QUERY_OUTPUTS_ROOT / slug / "sample.db"
+
 
 def _cmd_ingest(args: argparse.Namespace) -> int:
     """Run the full pipeline on one claim file and upsert into SQLite."""
@@ -61,9 +77,18 @@ def _cmd_ingest(args: argparse.Namespace) -> int:
     # --- Per-run logging --------------------------------------
     # File stem stands in for claim_id in the log filename until
     # the loader has actually parsed the file. Tags carry the
-    # other run-distinguishing knobs (extractor mode, parallelism)
-    # so successive runs against the same file don't collide.
-    mode_tag = "rule-only" if args.no_llm else (args.provider or "google")
+    # other run-distinguishing knobs (provider+model slug,
+    # parallelism) so successive runs against the same file don't
+    # collide AND so the filename advertises which LLM produced
+    # the artifacts.
+    mode_tag = rule_only_slug() if args.no_llm else provider_model_slug(args.provider)
+    # `--db` defaults to the slug-keyed location so each LLM (and the
+    # rule-only path) keep separate sample.db files. Explicit --db
+    # always wins.
+    db_path = args.db or str(_default_db_path(mode_tag))
+    args.db = db_path  # downstream code reads args.db
+    Path(db_path).parent.mkdir(parents=True, exist_ok=True)
+
     log_path = setup_logging(
         subcommand="ingest",
         claim_id=path.stem,
@@ -74,7 +99,16 @@ def _cmd_ingest(args: argparse.Namespace) -> int:
         verbose=args.verbose,
     )
     log = logging.getLogger("claims.cli")
-    log.info("ingest start file=%s db=%s log=%s", path.name, args.db, log_path)
+    log.info("ingest start file=%s db=%s log=%s", path.name, db_path, log_path)
+    if not args.no_llm:
+        log.info(
+            "llm provider=%s model=%s slug=%s",
+            resolve_provider(args.provider),
+            resolve_model(args.provider),
+            mode_tag,
+        )
+    else:
+        log.info("llm: skipped (--no-llm)")
 
     # --- Loader: file → RawNoteBlocks → Normalizer → Notes ----
     loaded = parse_file(str(path))
@@ -242,6 +276,12 @@ def _cmd_ingest(args: argparse.Namespace) -> int:
 
 def _cmd_query(args: argparse.Namespace) -> int:
     """Run one of the four canned queries and print typed JSON."""
+    load_dotenv()
+    # Default `--db` for queries follows the same slug convention as
+    # ingest, derived from current env. If you ingested with one
+    # provider and query with another, pass --db explicitly.
+    if args.db is None:
+        args.db = str(_default_db_path(provider_model_slug()))
     log_path = setup_logging(
         subcommand="query",
         claim_id=args.claim_id,
@@ -300,7 +340,15 @@ def main(argv: list[str] | None = None) -> int:
         default=None,
         help="Override the inferred jurisdiction (e.g. 'NJ').",
     )
-    ingest.add_argument("--db", default="claims.db")
+    ingest.add_argument(
+        "--db",
+        default=None,
+        help=(
+            "SQLite path. Default: "
+            "sample_claim_notes/query_outputs/<provider>-<model>/sample.db "
+            "(or `.../rule-only/sample.db` with --no-llm)."
+        ),
+    )
     ingest.add_argument(
         "--no-llm",
         action="store_true",
@@ -332,7 +380,14 @@ def main(argv: list[str] | None = None) -> int:
     query = sub.add_parser("query", help="Run a canned query.")
     query.add_argument("which", choices=["q1", "q2", "q3", "q4"])
     query.add_argument("--claim-id", required=True)
-    query.add_argument("--db", default="claims.db")
+    query.add_argument(
+        "--db",
+        default=None,
+        help=(
+            "SQLite path. Default: derived from LLM_PROVIDER+model env "
+            "(same slug convention as ingest)."
+        ),
+    )
 
     args = parser.parse_args(argv)
     if args.cmd == "ingest":

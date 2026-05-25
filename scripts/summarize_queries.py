@@ -17,6 +17,9 @@ from pathlib import Path
 REPO_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(REPO_ROOT / "src"))
 
+from dotenv import load_dotenv
+
+from claims.llm import provider_model_slug
 from claims.query import (
     q1_return_to_work,
     q2_appointments_attended,
@@ -25,14 +28,26 @@ from claims.query import (
 )
 from claims.store import connect
 
+_QUERY_OUTPUTS_ROOT = REPO_ROOT / "sample_claim_notes" / "query_outputs"
+
 
 def main() -> int:
+    load_dotenv()
     p = argparse.ArgumentParser()
     p.add_argument("--claim-id", required=True)
-    p.add_argument("--db", default="demo.db")
+    p.add_argument(
+        "--db",
+        default=None,
+        help=(
+            "SQLite path. Default: "
+            "sample_claim_notes/query_outputs/<provider>-<model>/sample.db."
+        ),
+    )
     args = p.parse_args()
 
-    conn = connect(args.db)
+    db = args.db or str(_QUERY_OUTPUTS_ROOT / provider_model_slug() / "sample.db")
+    print(f"db={db}", file=sys.stderr)
+    conn = connect(db)
 
     print(f"=== {args.claim_id} ===")
 

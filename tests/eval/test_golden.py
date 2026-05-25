@@ -1,6 +1,16 @@
 """End-to-end golden-output regression tests.
 
-Skipped by default. Run with: `pytest --eval` (hits live LLM API).
+Skipped by default. Two run modes:
+
+- `pytest --eval`               — ingest live, hits LLM API, costs money,
+                                  takes ~80s. The canonical signal.
+- `pytest --eval --saved-outputs` — compare goldens against the saved
+                                  `sample_claim_notes/query_outputs/<id>.json`
+                                  files. No LLM calls, sub-second. Useful
+                                  when iterating on the goldens or the
+                                  comparators themselves; assumes the saved
+                                  outputs are current (regenerate via
+                                  `scripts/write_query_outputs.py --claim-id <id>`).
 
 Per design notes in `comparators.py`:
 - Q1 / Q3: strict structural match
@@ -34,6 +44,7 @@ from tests.eval.comparators import (
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 GOLDEN_DIR = REPO_ROOT / "tests" / "golden"
+SAVED_OUTPUTS_DIR = REPO_ROOT / "sample_claim_notes" / "query_outputs"
 CLAIM_FILES: dict[str, Path] = {
     "1-29RT": REPO_ROOT / "sample_claim_notes" / "sample_claim_notes1.md",
     "2-248KR": REPO_ROOT / "sample_claim_notes" / "sample_claim_notes2.md",
@@ -42,13 +53,30 @@ CLAIM_FILES: dict[str, Path] = {
 pytestmark = pytest.mark.eval
 
 
-@pytest.fixture(scope="session")
-def fresh_outputs(tmp_path_factory: pytest.TempPathFactory) -> dict[str, dict]:
-    """Ingest both sample claims into a temp DB, render the four
-    queries per claim, return parsed-by-query dicts.
+def _load_saved_outputs() -> dict[str, dict]:
+    """Read the on-disk query JSONs as the actual-output side of the
+    comparison. Caller is responsible for keeping these current via
+    `scripts/write_query_outputs.py`."""
+    out: dict[str, dict] = {}
+    for claim_id in CLAIM_FILES:
+        path = SAVED_OUTPUTS_DIR / f"{claim_id}.json"
+        if not path.exists():
+            pytest.fail(
+                f"--saved-outputs requested but {path} does not exist; "
+                f"run `python scripts/write_query_outputs.py --claim-id {claim_id}` first"
+            )
+        _log.info("load saved :: claim=%s path=%s", claim_id, path)
+        out[claim_id] = parse_query_outputs(
+            path.read_text(encoding="utf-8")
+        )
+    return out
 
-    Session-scoped: one ingest pass shared across all eval tests in
-    this run. Costs ~$0.10-0.20 in LLM API calls per session."""
+
+def _ingest_and_render(
+    tmp_path_factory: pytest.TempPathFactory,
+) -> dict[str, dict]:
+    """Live path: ingest both claims into a temp DB, render queries
+    to stdout, parse the result."""
     work = tmp_path_factory.mktemp("eval")
     db = work / "eval.db"
 
@@ -118,6 +146,29 @@ def fresh_outputs(tmp_path_factory: pytest.TempPathFactory) -> dict[str, dict]:
         _log.info("render done :: claim=%s", claim_id)
 
     return outputs
+
+
+@pytest.fixture(scope="session")
+def fresh_outputs(
+    request: pytest.FixtureRequest,
+    tmp_path_factory: pytest.TempPathFactory,
+) -> dict[str, dict]:
+    """Outputs to compare goldens against.
+
+    Default path: ingest both sample claims into a temp DB, render the
+    four queries per claim, parse the result. Session-scoped: one
+    ingest pass shared across all eval tests in this run. Costs
+    ~$0.10-0.20 in LLM API calls per session.
+
+    With `--saved-outputs`: read the on-disk
+    `sample_claim_notes/query_outputs/<id>.json` files instead. No
+    LLM calls. The fixture name stays `fresh_outputs` for backward
+    compatibility with the parametrize wiring below — the test body
+    doesn't care whether the bytes came from a fresh ingest or a
+    saved file."""
+    if request.config.getoption("--saved-outputs"):
+        return _load_saved_outputs()
+    return _ingest_and_render(tmp_path_factory)
 
 
 @pytest.fixture(scope="session")

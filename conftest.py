@@ -19,6 +19,17 @@ def pytest_addoption(parser: pytest.Parser) -> None:
         default=False,
         help="Run end-to-end eval tests (hits LLM API; costs money).",
     )
+    parser.addoption(
+        "--saved-outputs",
+        action="store_true",
+        default=False,
+        help=(
+            "For test_golden: compare goldens against the saved "
+            "`sample_claim_notes/query_outputs/<id>.json` files instead of "
+            "running a fresh ingest. No LLM calls; useful for fast "
+            "iteration on the golden files or the comparators themselves."
+        ),
+    )
 
 
 def pytest_configure(config: pytest.Config) -> None:

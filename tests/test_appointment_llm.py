@@ -1,7 +1,7 @@
 """Phase 8: LLM-backed appointment extractor tests.
 
 No network calls — every test injects a FakeStructuredLLM that
-returns pinned pydantic responses. The real Google/OpenAI
+returns pinned pydantic responses. The real Google/OpenAI/Groq
 clients are exercised manually outside this suite.
 
 Coverage:

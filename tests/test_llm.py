@@ -7,8 +7,8 @@ Two concerns:
   cleanly on unknown providers. Does not actually construct a
   client that talks to the network.
 
-Concrete provider implementations (GoogleClient, OpenAIClient)
-are NOT exercised here — they need real SDKs to be useful and
+Concrete provider implementations (GoogleClient, OpenAIClient,
+GroqClient) are NOT exercised here — they need real SDKs to be useful and
 mocking each SDK's structured-outputs internals adds maintenance
 without buying much. The FakeStructuredLLM pattern below is what
 extractor tests in later phases will use to stay offline.

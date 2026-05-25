@@ -25,9 +25,10 @@ py -3.12 -m uv sync
 
 # 3. Configure secrets
 Copy-Item .env.example .env
-#   Edit .env: set GOOGLE_API_KEY (free tier from AI Studio works)
-#   or LLM_PROVIDER=openai + OPENAI_API_KEY (encrypted key at the
-#   bottom of docs/Exercise.md, password "adaptional")
+#   Edit .env: set GOOGLE_API_KEY (free tier from AI Studio works),
+#   or LLM_PROVIDER=openai + OPENAI_API_KEY (decrypt via
+#   `scripts/decrypt_openai_key.py`),
+#   or LLM_PROVIDER=groq + GROQ_API_KEY (console.groq.com/keys).
 
 # 4. Ingest a sample claim
 py -3.12 -m uv run python -m claims ingest `
@@ -73,12 +74,12 @@ stay distinguishable.
 | `q4` | How long does it take to see a provider once scheduled? | Per-visit lag list + median / p90 / mean distribution |
 
 Verified outputs against both real samples are committed under
-[`src/claims/query/query_outputs/`](src/claims/query/query_outputs/).
-Headline numbers:
+[`sample_claim_notes/query_outputs/google-gemini-2.5-flash-lite/`](sample_claim_notes/query_outputs/google-gemini-2.5-flash-lite/).
+Headline numbers (Gemini run, ingest date 2026-05-23):
 
 | | Claim 1 (`1-29RT`, NJ injury) | Claim 2 (`2-248KR`, SC injury) |
 |---|---|---|
-| Q1 | `returned`, 324 days, modified | `pending`, 509 days open |
+| Q1 | `returned`, 324 days, modified | `pending`, ~510 days open (advances daily) |
 | Q2 | 26 attended | 19 attended |
 | Q3 | 9 changes / 3 buckets | 4 changes / 2 buckets |
 | Q4 | 12 merged visits, median lag 5d | 7 merged visits, median lag 11d |
@@ -261,14 +262,38 @@ py -3.12 -m uv run python scripts/summarize_queries.py --claim-id 1-29RT
 ## Provider configuration
 
 The system is provider-agnostic at the `StructuredLLM` Protocol
-level (`src/claims/llm/base.py`). Both Google Gemini and OpenAI
-implementations ship; pick via `LLM_PROVIDER` in `.env`.
+level (`src/claims/llm/base.py`). Three implementations ship —
+Google Gemini, OpenAI, and Groq — pick via `LLM_PROVIDER` in `.env`.
 
 | Provider | SDK | Default model | Notes |
 |---|---|---|---|
 | `google` (default) | `google-genai` | `gemini-2.5-flash-lite` | Free tier covers full ingest of both samples. |
 | `openai` | `openai` | `gpt-4o-2024-08-06` | Requires structured-outputs (json_schema strict) model. |
+| `groq` | `groq` | `openai/gpt-oss-120b` | Strict-schema models only — `gpt-oss-*`, `kimi-k2`, `llama-4-*`. Free tier rate-limits before a full claim finishes; use `--workers 1` or the per-extractor smoke scripts. |
 
-To swap: change `LLM_PROVIDER=openai` in `.env` and re-run any
+To swap: change `LLM_PROVIDER=...` in `.env` and re-run any
 `claims ingest`. Each extractor depends on the abstract Protocol;
 no code changes.
+
+**End-to-end verification scope.** The committed query outputs and
+the Layer 1 goldens were produced against **Gemini**. The OpenAI
+and Groq paths are wired and unit-tested (with mocked clients) but
+not validated end-to-end on the corpus: the OpenAI key shipped in
+`docs/Exercise.md` now returns 401, and Groq's free tier rate-limits
+before either claim finishes. The provider-swap path works
+mechanically; the *numerical results* are Gemini's.
+
+### Getting the OpenAI key (if it ever comes back online)
+
+`docs/Exercise.md` ships the OpenAI key as an AES-256-CBC encrypted
+blob. The helper at `scripts/decrypt_openai_key.py` reads the blob
+and password from `.env` (the two `EXERCISE_KEY_*` vars in
+`.env.example`) and prints the plaintext key:
+
+```powershell
+py -3.12 -m uv run python scripts/decrypt_openai_key.py
+```
+
+Paste the output into `OPENAI_API_KEY=`. *Caveat: as of submission
+the decrypted key is dead at OpenAI's end (401 invalid_api_key).
+The script is correct; the key isn't.*

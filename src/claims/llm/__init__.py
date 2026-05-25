@@ -1,10 +1,9 @@
 """Provider-agnostic LLM layer.
 
 Extractors depend on the StructuredLLM Protocol; the concrete
-implementation is picked from the LLM_PROVIDER env var
-(`google` by default, `openai` available). Each implementation
-adapts its SDK to the same `structured(*, system, user,
-response_model) -> T` contract — pydantic in, pydantic out.
+implementation is picked from the LLM_PROVIDER env var. Each
+implementation adapts its SDK to the same `structured(*, system,
+user, response_model) -> T` contract — pydantic in, pydantic out.
 
 Swapping providers is one env var. No extractor code changes.
 

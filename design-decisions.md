@@ -26,6 +26,8 @@ Numbered, accepted design decisions. `DESIGN.md` is the polished spec these feed
 | DD-021 | Appointments use per-note + reconciliation, not whole-claim LLM | Accepted | 2026-05-24 |
 | DD-022 | RTW resolver merges within a ±7-day window per `(claim_id, duty_type)` | Accepted | 2026-05-24 |
 | DD-023 | Widen `(note_date, quote)` evidence pairs to every event type; rename `AppointmentEvidence` → `EventEvidence` | Accepted | 2026-05-24 |
+| DD-024 | Per-`(provider, model)` slug clusters every per-run artifact | Accepted | 2026-05-25 |
+| DD-025 | Groq as a third `StructuredLLM` provider | Accepted | 2026-05-25 |
 
 ---
 
@@ -206,6 +208,28 @@ Identity-merge on `(claim_id, event_date, duty_type)` kept duplicates when the L
 **Accepted · 2026-05-24**
 
 DD-020 scoped structured `evidence: tuple[EventEvidence, ...]` to appointments only. Extend the same shape to **every** event type — `reserve_change`, `return_to_work` — for a uniform evidence surface. Single-source events carry a one-element tuple; merged events union one entry per contributing note (dedup by `(note_date, quote)`, sort by `note_date`). `AppointmentEvidence` renamed to `EventEvidence`. `source_note_dates` and `evidence_quote` survive as derived `@property`s on every attributes class. Q1 and Q3 outputs ship the full evidence list in place of scalar `evidence_quote` + `source_note_dates`.
+
+---
+
+## DD-024 — Per-`(provider, model)` slug clusters every per-run artifact
+**Accepted · 2026-05-25**
+
+A filesystem-safe `<provider>-<model>` slug (e.g. `openai-gpt-4o-2024-08-06`, `google-gemini-2.5-flash-lite`) is the routing key for: the ingest log filename, the SQLite DB default path (`sample_claim_notes/query_outputs/<slug>/sample.db`), and the per-claim query-output JSONs (`.../<slug>/<claim_id>.json`). Rule-only ingest uses `rule-only` as its slug.
+
+**Why.** Without clustering, re-ingesting with a different LLM clobbers the prior run's DB and JSONs — destructively, and silently if a stale `LLM_PROVIDER` env var is read at a bad moment (this exact race scrambled outputs once during development). With clustering, each provider's artifacts coexist; comparison across providers is a directory listing, not a diff against memory. The slug is also a free human-readable tag on every log filename ("which model produced this trace?").
+
+**Rejected.** A single `--variant` flag callers pass explicitly — sneaks fewer footguns past inattentive users (forgetting `--variant` was the whole problem); env-derived default is the safer behavior. Per-claim DBs — overkill at corpus scales we care about.
+
+---
+
+## DD-025 — Groq as a third `StructuredLLM` provider
+**Accepted · 2026-05-25**
+
+`src/claims/llm/groq_client.py` adapts the official `groq` SDK to the `StructuredLLM` protocol behind `LLM_PROVIDER=groq`. Same contract as the other two providers (strict json_schema `response_format`, 60s timeout, retry-layer compatible). Default model `openai/gpt-oss-120b`; any Groq model that supports strict json_schema works (`gpt-oss-*`, `kimi-k2`, `llama-4-*`).
+
+**Why.** Concrete proof that the `StructuredLLM` Protocol abstraction earns its keep — adding a third provider was three switch-statement arms (factory, slug, model-resolver) and one new file. No extractor / resolver / query / test changes. Groq is interesting independently: an order of magnitude faster than gpt-4o, a fraction of the cost on credit, and the gpt-oss-* family is the highest-quality strict-schema-compliant open-weights series.
+
+**Known limitation.** Groq's free tier rate-limits aggressively (tokens-per-minute, requests-per-day); a full 4-worker ingest of either sample claim trips the limit. Use `--workers 1` or fall back to the per-extractor smoke scripts (`scripts/try_appointment_llm.py`, `scripts/try_rtw_llm.py`) on free tier. Not a code bug — the retry layer already absorbs transient 429s; sustained 429s drop events as designed.
 
 ---
 

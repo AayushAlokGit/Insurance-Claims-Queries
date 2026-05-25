@@ -15,15 +15,15 @@
       ],
       "specialty": null,
       "appointment_type": null,
-      "event_id": "5140f846-5c15-4918-a5cf-16a246fcc6d7",
+      "event_id": "04ff0afe-dfc7-4dac-b8d2-7f556aa2258d",
       "extraction_method": "merged",
       "evidence": [
         {
-          "note_date": "2025-05-29",
+          "note_date": "2025-03-24",
           "quote": "Occupational Health Clinic initially seen on 12/30/24 - Txt: Anti-inflammatory Meds."
         },
         {
-          "note_date": "2025-08-29",
+          "note_date": "2025-05-29",
           "quote": "Occupational Health Clinic initially seen on 12/30/24 - Txt: Anti-inflammatory Meds."
         }
       ]
@@ -36,12 +36,20 @@
       ],
       "specialty": null,
       "appointment_type": null,
-      "event_id": "aed62d95-882d-450b-a963-94765f0e92d0",
+      "event_id": "54854327-b63a-47e9-9f3f-cc66204d331a",
       "extraction_method": "merged",
       "evidence": [
         {
+          "note_date": "2025-01-06",
+          "quote": "Note: Text to clmt to see if she attended her fwp at Occupational Health Clinic on 1/6."
+        },
+        {
           "note_date": "2025-01-28",
           "quote": "She followed up with Occupational Health Clinic on 1/6/25 where she was referred to physical therapy, which she is currently completing."
+        },
+        {
+          "note_date": "2025-03-24",
+          "quote": "Fwp w/ Occupational Health Clinic on 1/6 - PT referral."
         },
         {
           "note_date": "2025-05-29",
@@ -61,7 +69,7 @@
       ],
       "specialty": null,
       "appointment_type": null,
-      "event_id": "ed831d0a-64fc-47fe-9b69-6c52f1f91a27",
+      "event_id": "3ac61bb6-c7cf-497f-a82c-28fe94345414",
       "extraction_method": "merged",
       "evidence": [
         {
@@ -74,19 +82,15 @@
         },
         {
           "note_date": "2025-03-24",
-          "quote": "Seen in fwp on 1/20 - Continue PT as scheduled. Return to clinic in 4 weeks for fwp upon PT completion. Continue w/ naproxen and cyclobenzaprine as directed. Restricted duty - Sedentary. No climb/work from heights"
+          "quote": "Seen in fwp on 1/20 - Continue PT as scheduled. Return to clinic in 4 weeks for fwp upon PT completion."
         },
         {
           "note_date": "2025-05-29",
           "quote": "Seen in fwp on 1/20 - Continue PT as scheduled."
         },
         {
-          "note_date": "2025-06-30",
-          "quote": "Seen in fwp on 1/20 - Continue PT as scheduled. Return to clinic in 4 weeks for fwp upon PT completion. Continue w/ naproxen and cyclobenzaprine as directed. Restricted duty - Sedentary. No climb/work from heights"
-        },
-        {
           "note_date": "2025-08-29",
-          "quote": "Seen in fwp on 1/20 - Continue PT as scheduled. Return to clinic in 4 weeks for fwp upon PT completion."
+          "quote": "Seen in fwp on 1/20 - Continue PT as scheduled."
         }
       ]
     },
@@ -98,16 +102,12 @@
       ],
       "specialty": null,
       "appointment_type": null,
-      "event_id": "64df6a9f-f843-41e3-94ba-ffbbe5d66b10",
+      "event_id": "5213269a-d020-42a5-9800-7045d6af87f0",
       "extraction_method": "merged",
       "evidence": [
         {
           "note_date": "2025-01-28",
-          "quote": "She is to follow up around 2/20 and complete PT."
-        },
-        {
-          "note_date": "2025-02-25",
-          "quote": "Occupational Health Clinic Work Status Report from her OV on 2/22"
+          "quote": "NOV: She is to follow up around 2/20 and complete PT."
         },
         {
           "note_date": "2025-03-24",
@@ -115,14 +115,6 @@
         },
         {
           "note_date": "2025-05-29",
-          "quote": "Fwp on 2/22 - Txt: Anti-inflammatory Meds; Physical Therapy"
-        },
-        {
-          "note_date": "2025-06-30",
-          "quote": "Fwp on 2/22 - Txt: Anti-inflammatory Meds; Physical Therapy"
-        },
-        {
-          "note_date": "2025-08-29",
           "quote": "Fwp on 2/22 - Txt: Anti-inflammatory Meds; Physical Therapy"
         }
       ]
@@ -135,7 +127,7 @@
       ],
       "specialty": null,
       "appointment_type": null,
-      "event_id": "11fe0445-72bf-4af0-a869-20315c2bb8dc",
+      "event_id": "69fa7964-22cb-420f-9c95-d82eb18dfbb3",
       "extraction_method": "merged",
       "evidence": [
         {
@@ -147,16 +139,8 @@
           "quote": "Last office visit was 3/8 and requested they fax over the OV notes and work status."
         },
         {
-          "note_date": "2025-03-24",
-          "quote": "Fwp 3/8 - Orthopedic referral placed today as pain is not responding to PT. Continued LD work restrictions: 10lb lift/push/pull. Bend/squat/twist/crawl/climb/work at heights Rarely"
-        },
-        {
           "note_date": "2025-05-29",
           "quote": "Fwp 3/8 - Orthopedic referral placed today as pain is not responding to PT."
-        },
-        {
-          "note_date": "2025-06-30",
-          "quote": "Fwp 3/8 - Orthopedic referral placed today as pain is not responding to PT. Continued LD work restrictions: 10lb lift/push/pull. Bend/squat/twist/crawl/climb/work at heights Rarely"
         },
         {
           "note_date": "2025-08-29",
@@ -168,11 +152,12 @@
       "date": "2025-04-22",
       "status": "attended",
       "parties": [
-        "Caldwell"
+        "Caldwell",
+        "Spine & Neurology Group"
       ],
       "specialty": null,
       "appointment_type": null,
-      "event_id": "309b560d-675b-425e-9824-0ea8288971ee",
+      "event_id": "5c92f51c-fe27-44a3-adf6-77d3529f77a9",
       "extraction_method": "merged",
       "evidence": [
         {
@@ -185,11 +170,15 @@
         },
         {
           "note_date": "2025-03-26",
-          "quote": "she will be scheduled with our requested provider, Dr. Caldwell, on April 22, 2025 at 1:00"
+          "quote": "Dr. Caldwell, on April 22, 2025 at 1:00"
         },
         {
           "note_date": "2025-04-14",
-          "quote": "you have your appointment at Spine & Neurology Group with Dr. Caldwell on April 22, 2025 at 1:00."
+          "quote": "Good Morning. Just a reminder that you have your appointment at Spine & Neurology Group with Dr. Caldwell on April 22, 2025 at 1:00."
+        },
+        {
+          "note_date": "2025-04-23",
+          "quote": "DOS - 4.22.25"
         },
         {
           "note_date": "2025-04-23",
@@ -201,10 +190,6 @@
         },
         {
           "note_date": "2025-04-23",
-          "quote": "IE's visit with the provider (DOS - 4.22.25)"
-        },
-        {
-          "note_date": "2025-04-23",
           "quote": "The subject had a medical appointment with Dr. Caldwell at 1:00 PM at the Spine & Neurology Group."
         },
         {
@@ -213,11 +198,11 @@
         },
         {
           "note_date": "2025-06-30",
-          "quote": "Dr. Caldwell schedules all WC cases as an initial IME. This was completed on April 22, 2025. MRI was ordered and she was referred to Pain Mgmt."
+          "quote": "This was completed on April 22, 2025."
         },
         {
           "note_date": "2025-08-29",
-          "quote": "This was completed on April 22, 2025. MRI was ordered and she was referred to Pain Mgmt."
+          "quote": "Dr. Caldwell schedules all WC cases as an initial IME. This was completed on April 22, 2025."
         }
       ]
     },
@@ -227,7 +212,7 @@
       "parties": [],
       "specialty": null,
       "appointment_type": null,
-      "event_id": "14131841-fffa-4370-9360-94931402c5d2",
+      "event_id": "11616c78-6613-42f3-bb0f-59f8e62009ca",
       "extraction_method": "merged",
       "evidence": [
         {
@@ -244,16 +229,41 @@
       "date": "2025-05-21",
       "status": "attended",
       "parties": [
+        "Occupational Health Clinic"
+      ],
+      "specialty": null,
+      "appointment_type": null,
+      "event_id": "83662727-ca30-4dbc-835a-92a03ded250c",
+      "extraction_method": "merged",
+      "evidence": [
+        {
+          "note_date": "2025-04-23",
+          "quote": "I will see her back in follow-up in 4 weeks to reassess and review imaging."
+        },
+        {
+          "note_date": "2025-05-23",
+          "quote": "Date of Appointment: 5.21.25\nDiagnosis & Assessment: 1. Lumbar spondylosis - M47.816 2. Degenerative disc disease, lumbar - M51.369 3. Sacroiliac joint pain - M53.3. Examination reveals positive facet loading in the lumbar spine. Mild antalgic gait noted. MRI reviewed. IE reports numbness and tingling in the bilateral thighs; however, the MRI does not reveal significant nerve root entrapment."
+        }
+      ]
+    },
+    {
+      "date": "2025-05-21",
+      "status": "attended",
+      "parties": [
         "Farano"
       ],
       "specialty": null,
       "appointment_type": null,
-      "event_id": "eb082a83-0533-4b1b-9163-506459b851a0",
+      "event_id": "15626b4b-25fe-4f7f-941f-3cc31babe1e0",
       "extraction_method": "merged",
       "evidence": [
         {
           "note_date": "2025-05-08",
           "quote": "IE confirmed via text message that she can attend the appointment with Dr. Farano's office on 5.21.25."
+        },
+        {
+          "note_date": "2025-05-08",
+          "quote": "She has been booked for a new patient consultation on 5/21 at 10:15 am."
         },
         {
           "note_date": "2025-05-13",
@@ -269,7 +279,11 @@
         },
         {
           "note_date": "2025-06-30",
-          "quote": "Pain Mgmt consult w/ Dr. Farano on 5/21 - Referred for injections\n5/21/25 Dr. Farano apt - MRI does not demonstrate any significant nerve root entrapment. HEP. Bilateral L3-5 MBB and RFA with positive results."
+          "quote": "5/21/25 Dr. Farano apt - MRI does not demonstrate any significant nerve root entrapment. HEP. Bilateral L3-5 MBB and RFA with positive results."
+        },
+        {
+          "note_date": "2025-06-30",
+          "quote": "Pain Mgmt consult w/ Dr. Farano on 5/21 - Referred for injections"
         },
         {
           "note_date": "2025-07-29",
@@ -277,28 +291,11 @@
         },
         {
           "note_date": "2025-08-29",
-          "quote": "5/21/25 Dr. Farano apt - MRI does not demonstrate any significant nerve root entrapment. HEP. Bilateral L3-5 MBB and RFA with positive results."
+          "quote": "5/21/25 Dr. Farano apt - MRI does not demonstrate any significant nerve root entrapment."
         },
         {
           "note_date": "2025-08-29",
           "quote": "Pain Mgmt consult w/ Dr. Farano on 5/21 - Referred for injections"
-        }
-      ]
-    },
-    {
-      "date": "2025-05-21",
-      "status": "attended",
-      "parties": [
-        "Occupational Health Clinic"
-      ],
-      "specialty": null,
-      "appointment_type": null,
-      "event_id": "e06bdaf2-28a6-410a-a474-64492b881288",
-      "extraction_method": "merged",
-      "evidence": [
-        {
-          "note_date": "2025-04-23",
-          "quote": "IE presents to the clinic with complaints of back pain. The visit was an IME with option to treat."
         }
       ]
     },
@@ -310,7 +307,7 @@
       ],
       "specialty": null,
       "appointment_type": null,
-      "event_id": "0c0d1152-83b6-4c79-bf47-258fc2c5b417",
+      "event_id": "48994d16-c0b6-4a70-84ff-2f9b68eb77ae",
       "extraction_method": "merged",
       "evidence": [
         {
@@ -338,30 +335,9 @@
           "quote": "7/3/25 Dr. Caldwell apt - Procedure: Para-facet injection w/ medial branch block lumbar/sacral"
         }
       ]
-    },
-    {
-      "date": "2025-08-13",
-      "status": "attended",
-      "parties": [
-        "Farano"
-      ],
-      "specialty": null,
-      "appointment_type": null,
-      "event_id": "dd3ede06-5637-438d-b3f1-ea40e4de9c83",
-      "extraction_method": "merged",
-      "evidence": [
-        {
-          "note_date": "2025-07-29",
-          "quote": "2. 8/13 @ 2:45 apt with Dr. Farano (pain management)"
-        },
-        {
-          "note_date": "2025-08-29",
-          "quote": "NOV: Fwp w/ Dr. Farano was on 8/13 however clmt had to reschedule."
-        }
-      ]
     }
   ],
-  "count": 11
+  "count": 10
 }
 
 === q3 ===
@@ -378,7 +354,7 @@
           "previous_amount": "0",
           "delta": "15900.00",
           "author": "R.N.",
-          "event_id": "a7cd7fd3-02e1-41e4-a7c0-84e9732bc529",
+          "event_id": "235c7e58-3775-4ae3-a160-169911e1dca4",
           "extraction_method": "rule",
           "evidence": [
             {
@@ -393,7 +369,7 @@
           "previous_amount": "15900.00",
           "delta": "16900.00",
           "author": "B.S.",
-          "event_id": "38222c11-70ed-42e2-8aca-955e69f0d87d",
+          "event_id": "b04fbe3a-267d-4e23-8cbd-09a95bfbc56b",
           "extraction_method": "rule",
           "evidence": [
             {
@@ -415,7 +391,7 @@
           "previous_amount": "0",
           "delta": "37100.00",
           "author": "R.N.",
-          "event_id": "d785b60e-5899-4f8a-a7b5-519996cb2567",
+          "event_id": "822780d2-e3d2-4b5a-8cd3-c6e64188fbea",
           "extraction_method": "rule",
           "evidence": [
             {
@@ -430,7 +406,7 @@
           "previous_amount": "37100.00",
           "delta": "201675.00",
           "author": "B.S.",
-          "event_id": "6621c1ce-e6c4-4766-8a96-90cd11a387da",
+          "event_id": "99e63036-0c89-4065-b7cb-6a5bf0258d5f",
           "extraction_method": "rule",
           "evidence": [
             {
@@ -451,21 +427,51 @@
       "parties": [
         "Occupational Health Clinic"
       ],
+      "scheduled_notice_date": "2025-01-06",
+      "scheduled_for_date": "2025-01-06",
+      "occurred_on": "2025-01-06",
+      "lag_days": 0,
+      "on_time_delta_days": 0,
+      "event_id": "54854327-b63a-47e9-9f3f-cc66204d331a",
+      "extraction_method": "merged",
+      "evidence": [
+        {
+          "note_date": "2025-01-06",
+          "quote": "Note: Text to clmt to see if she attended her fwp at Occupational Health Clinic on 1/6."
+        },
+        {
+          "note_date": "2025-01-28",
+          "quote": "She followed up with Occupational Health Clinic on 1/6/25 where she was referred to physical therapy, which she is currently completing."
+        },
+        {
+          "note_date": "2025-03-24",
+          "quote": "Fwp w/ Occupational Health Clinic on 1/6 - PT referral."
+        },
+        {
+          "note_date": "2025-05-29",
+          "quote": "Fwp w/ Occupational Health Clinic on 1/6 - PT referral."
+        },
+        {
+          "note_date": "2025-08-29",
+          "quote": "Fwp w/ Occupational Health Clinic on 1/6 - PT referral."
+        }
+      ]
+    },
+    {
+      "parties": [
+        "Occupational Health Clinic"
+      ],
       "scheduled_notice_date": "2025-01-28",
       "scheduled_for_date": "2025-02-22",
       "occurred_on": "2025-02-22",
       "lag_days": 25,
       "on_time_delta_days": 0,
-      "event_id": "64df6a9f-f843-41e3-94ba-ffbbe5d66b10",
+      "event_id": "5213269a-d020-42a5-9800-7045d6af87f0",
       "extraction_method": "merged",
       "evidence": [
         {
           "note_date": "2025-01-28",
-          "quote": "She is to follow up around 2/20 and complete PT."
-        },
-        {
-          "note_date": "2025-02-25",
-          "quote": "Occupational Health Clinic Work Status Report from her OV on 2/22"
+          "quote": "NOV: She is to follow up around 2/20 and complete PT."
         },
         {
           "note_date": "2025-03-24",
@@ -473,14 +479,6 @@
         },
         {
           "note_date": "2025-05-29",
-          "quote": "Fwp on 2/22 - Txt: Anti-inflammatory Meds; Physical Therapy"
-        },
-        {
-          "note_date": "2025-06-30",
-          "quote": "Fwp on 2/22 - Txt: Anti-inflammatory Meds; Physical Therapy"
-        },
-        {
-          "note_date": "2025-08-29",
           "quote": "Fwp on 2/22 - Txt: Anti-inflammatory Meds; Physical Therapy"
         }
       ]
@@ -494,7 +492,7 @@
       "occurred_on": "2025-03-08",
       "lag_days": 11,
       "on_time_delta_days": 0,
-      "event_id": "11fe0445-72bf-4af0-a869-20315c2bb8dc",
+      "event_id": "69fa7964-22cb-420f-9c95-d82eb18dfbb3",
       "extraction_method": "merged",
       "evidence": [
         {
@@ -506,16 +504,8 @@
           "quote": "Last office visit was 3/8 and requested they fax over the OV notes and work status."
         },
         {
-          "note_date": "2025-03-24",
-          "quote": "Fwp 3/8 - Orthopedic referral placed today as pain is not responding to PT. Continued LD work restrictions: 10lb lift/push/pull. Bend/squat/twist/crawl/climb/work at heights Rarely"
-        },
-        {
           "note_date": "2025-05-29",
           "quote": "Fwp 3/8 - Orthopedic referral placed today as pain is not responding to PT."
-        },
-        {
-          "note_date": "2025-06-30",
-          "quote": "Fwp 3/8 - Orthopedic referral placed today as pain is not responding to PT. Continued LD work restrictions: 10lb lift/push/pull. Bend/squat/twist/crawl/climb/work at heights Rarely"
         },
         {
           "note_date": "2025-08-29",
@@ -525,14 +515,15 @@
     },
     {
       "parties": [
-        "Caldwell"
+        "Caldwell",
+        "Spine & Neurology Group"
       ],
       "scheduled_notice_date": "2025-03-24",
       "scheduled_for_date": "2025-04-22",
       "occurred_on": "2025-04-22",
       "lag_days": 29,
       "on_time_delta_days": 0,
-      "event_id": "309b560d-675b-425e-9824-0ea8288971ee",
+      "event_id": "5c92f51c-fe27-44a3-adf6-77d3529f77a9",
       "extraction_method": "merged",
       "evidence": [
         {
@@ -545,11 +536,15 @@
         },
         {
           "note_date": "2025-03-26",
-          "quote": "she will be scheduled with our requested provider, Dr. Caldwell, on April 22, 2025 at 1:00"
+          "quote": "Dr. Caldwell, on April 22, 2025 at 1:00"
         },
         {
           "note_date": "2025-04-14",
-          "quote": "you have your appointment at Spine & Neurology Group with Dr. Caldwell on April 22, 2025 at 1:00."
+          "quote": "Good Morning. Just a reminder that you have your appointment at Spine & Neurology Group with Dr. Caldwell on April 22, 2025 at 1:00."
+        },
+        {
+          "note_date": "2025-04-23",
+          "quote": "DOS - 4.22.25"
         },
         {
           "note_date": "2025-04-23",
@@ -561,10 +556,6 @@
         },
         {
           "note_date": "2025-04-23",
-          "quote": "IE's visit with the provider (DOS - 4.22.25)"
-        },
-        {
-          "note_date": "2025-04-23",
           "quote": "The subject had a medical appointment with Dr. Caldwell at 1:00 PM at the Spine & Neurology Group."
         },
         {
@@ -573,11 +564,11 @@
         },
         {
           "note_date": "2025-06-30",
-          "quote": "Dr. Caldwell schedules all WC cases as an initial IME. This was completed on April 22, 2025. MRI was ordered and she was referred to Pain Mgmt."
+          "quote": "This was completed on April 22, 2025."
         },
         {
           "note_date": "2025-08-29",
-          "quote": "This was completed on April 22, 2025. MRI was ordered and she was referred to Pain Mgmt."
+          "quote": "Dr. Caldwell schedules all WC cases as an initial IME. This was completed on April 22, 2025."
         }
       ]
     },
@@ -590,12 +581,16 @@
       "occurred_on": "2025-05-21",
       "lag_days": 28,
       "on_time_delta_days": 0,
-      "event_id": "e06bdaf2-28a6-410a-a474-64492b881288",
+      "event_id": "83662727-ca30-4dbc-835a-92a03ded250c",
       "extraction_method": "merged",
       "evidence": [
         {
           "note_date": "2025-04-23",
-          "quote": "IE presents to the clinic with complaints of back pain. The visit was an IME with option to treat."
+          "quote": "I will see her back in follow-up in 4 weeks to reassess and review imaging."
+        },
+        {
+          "note_date": "2025-05-23",
+          "quote": "Date of Appointment: 5.21.25\nDiagnosis & Assessment: 1. Lumbar spondylosis - M47.816 2. Degenerative disc disease, lumbar - M51.369 3. Sacroiliac joint pain - M53.3. Examination reveals positive facet loading in the lumbar spine. Mild antalgic gait noted. MRI reviewed. IE reports numbness and tingling in the bilateral thighs; however, the MRI does not reveal significant nerve root entrapment."
         }
       ]
     },
@@ -608,12 +603,16 @@
       "occurred_on": "2025-05-21",
       "lag_days": 13,
       "on_time_delta_days": 0,
-      "event_id": "eb082a83-0533-4b1b-9163-506459b851a0",
+      "event_id": "15626b4b-25fe-4f7f-941f-3cc31babe1e0",
       "extraction_method": "merged",
       "evidence": [
         {
           "note_date": "2025-05-08",
           "quote": "IE confirmed via text message that she can attend the appointment with Dr. Farano's office on 5.21.25."
+        },
+        {
+          "note_date": "2025-05-08",
+          "quote": "She has been booked for a new patient consultation on 5/21 at 10:15 am."
         },
         {
           "note_date": "2025-05-13",
@@ -629,7 +628,11 @@
         },
         {
           "note_date": "2025-06-30",
-          "quote": "Pain Mgmt consult w/ Dr. Farano on 5/21 - Referred for injections\n5/21/25 Dr. Farano apt - MRI does not demonstrate any significant nerve root entrapment. HEP. Bilateral L3-5 MBB and RFA with positive results."
+          "quote": "5/21/25 Dr. Farano apt - MRI does not demonstrate any significant nerve root entrapment. HEP. Bilateral L3-5 MBB and RFA with positive results."
+        },
+        {
+          "note_date": "2025-06-30",
+          "quote": "Pain Mgmt consult w/ Dr. Farano on 5/21 - Referred for injections"
         },
         {
           "note_date": "2025-07-29",
@@ -637,7 +640,7 @@
         },
         {
           "note_date": "2025-08-29",
-          "quote": "5/21/25 Dr. Farano apt - MRI does not demonstrate any significant nerve root entrapment. HEP. Bilateral L3-5 MBB and RFA with positive results."
+          "quote": "5/21/25 Dr. Farano apt - MRI does not demonstrate any significant nerve root entrapment."
         },
         {
           "note_date": "2025-08-29",
@@ -654,7 +657,7 @@
       "occurred_on": "2025-07-03",
       "lag_days": 24,
       "on_time_delta_days": 0,
-      "event_id": "0c0d1152-83b6-4c79-bf47-258fc2c5b417",
+      "event_id": "48994d16-c0b6-4a70-84ff-2f9b68eb77ae",
       "extraction_method": "merged",
       "evidence": [
         {
@@ -682,33 +685,11 @@
           "quote": "7/3/25 Dr. Caldwell apt - Procedure: Para-facet injection w/ medial branch block lumbar/sacral"
         }
       ]
-    },
-    {
-      "parties": [
-        "Farano"
-      ],
-      "scheduled_notice_date": "2025-07-29",
-      "scheduled_for_date": "2025-08-13",
-      "occurred_on": "2025-08-13",
-      "lag_days": 15,
-      "on_time_delta_days": 0,
-      "event_id": "dd3ede06-5637-438d-b3f1-ea40e4de9c83",
-      "extraction_method": "merged",
-      "evidence": [
-        {
-          "note_date": "2025-07-29",
-          "quote": "2. 8/13 @ 2:45 apt with Dr. Farano (pain management)"
-        },
-        {
-          "note_date": "2025-08-29",
-          "quote": "NOV: Fwp w/ Dr. Farano was on 8/13 however clmt had to reschedule."
-        }
-      ]
     }
   ],
   "lag": {
     "median": 24.0,
     "p90": 28.4,
-    "mean": 20.714285714285715
+    "mean": 18.571428571428573
   }
 }

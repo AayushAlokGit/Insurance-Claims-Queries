@@ -75,6 +75,12 @@ def test_factory_dispatches_to_openai(monkeypatch: pytest.MonkeyPatch) -> None:
         get_client(provider="openai")
 
 
+def test_factory_dispatches_to_groq(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.delenv("GROQ_API_KEY", raising=False)
+    with pytest.raises(LLMError, match="GROQ_API_KEY"):
+        get_client(provider="groq")
+
+
 # --- FakeStructuredLLM (the test-harness pattern) ----------------
 
 

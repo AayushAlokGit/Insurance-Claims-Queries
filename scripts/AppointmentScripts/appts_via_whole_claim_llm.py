@@ -131,7 +131,7 @@ def _user_prompt(claim_id: str, dol: date | None, notes) -> str:  # type: ignore
 def main() -> int:
     p = argparse.ArgumentParser(description=__doc__)
     p.add_argument("--file", required=True)
-    p.add_argument("--provider", choices=["google", "openai"], default=None)
+    p.add_argument("--provider", choices=["google", "openai", "groq"], default=None)
     p.add_argument("--out", default=None)
     args = p.parse_args()
 

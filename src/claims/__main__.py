@@ -356,7 +356,7 @@ def main(argv: list[str] | None = None) -> int:
     )
     ingest.add_argument(
         "--provider",
-        choices=["google", "openai"],
+        choices=["google", "openai", "groq"],
         default=None,
         help="Override LLM_PROVIDER env var.",
     )

@@ -63,7 +63,7 @@ def _serialize_appt(ev) -> dict:  # type: ignore[no-untyped-def]
 def main() -> int:
     p = argparse.ArgumentParser(description=__doc__)
     p.add_argument("--file", required=True, help="Path to the claim notes .md file.")
-    p.add_argument("--provider", choices=["google", "openai"], default=None)
+    p.add_argument("--provider", choices=["google", "openai", "groq"], default=None)
     p.add_argument("--out", default=None)
     args = p.parse_args()
 

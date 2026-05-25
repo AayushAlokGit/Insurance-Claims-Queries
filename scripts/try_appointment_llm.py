@@ -63,7 +63,7 @@ def main() -> int:
     )
     parser.add_argument(
         "--provider",
-        choices=["google", "openai"],
+        choices=["google", "openai", "groq"],
         default=None,
         help="Override LLM_PROVIDER env var for this run.",
     )
@@ -182,7 +182,8 @@ def main() -> int:
                     f"  -> status={attrs.status:<9}  date={date_str}  "
                     f"parties=[{parties_str}]"
                 )
-                print(f"     quote: {attrs.evidence_quote!r}")
+                quote = attrs.evidence[0].quote if attrs.evidence else None
+                print(f"     quote: {quote!r}")
                 by_status[attrs.status] = by_status.get(attrs.status, 0) + 1
             total += len(events)
             print()

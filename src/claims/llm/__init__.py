@@ -7,6 +7,8 @@ adapts its SDK to the same `structured(*, system, user,
 response_model) -> T` contract — pydantic in, pydantic out.
 
 Swapping providers is one env var. No extractor code changes.
+
+Supported providers: `google` (default), `openai`, `groq`.
 """
 
 from __future__ import annotations
@@ -22,7 +24,7 @@ def get_client(provider: str | None = None) -> StructuredLLM:
     """Construct an LLM client based on the LLM_PROVIDER env var.
 
     `provider` overrides the env var when supplied — useful in
-    tests. Recognised values: `google` (default), `openai`."""
+    tests. Recognised values: `google` (default), `openai`, `groq`."""
     name = resolve_provider(provider)
     if name == "google":
         from claims.llm.google_client import GoogleClient
@@ -32,6 +34,10 @@ def get_client(provider: str | None = None) -> StructuredLLM:
         from claims.llm.openai_client import OpenAIClient
 
         return OpenAIClient()
+    if name == "groq":
+        from claims.llm.groq_client import GroqClient
+
+        return GroqClient()
     raise LLMError(f"unknown LLM provider: {name!r}")
 
 
@@ -55,6 +61,10 @@ def resolve_model(provider: str | None = None, model: str | None = None) -> str:
         from claims.llm.openai_client import DEFAULT_MODEL as O
 
         return os.environ.get("OPENAI_MODEL", O)
+    if name == "groq":
+        from claims.llm.groq_client import DEFAULT_MODEL as Gr
+
+        return os.environ.get("GROQ_MODEL", Gr)
     raise LLMError(f"unknown LLM provider: {name!r}")
 
 

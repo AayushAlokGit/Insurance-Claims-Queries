@@ -77,7 +77,7 @@ def main() -> int:
     )
     p.add_argument(
         "--provider",
-        choices=["google", "openai"],
+        choices=["google", "openai", "groq"],
         default=None,
         help="Override LLM_PROVIDER for the output-subdir slug.",
     )

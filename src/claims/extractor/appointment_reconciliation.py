@@ -62,11 +62,17 @@ _GENERIC = frozenset(
 
 def _normalize_party(raw: str | None) -> str | None:
     """Lowercase, strip honorifics / suffixes / punctuation, collapse
-    whitespace. Returns None for empties and generic labels."""
+    whitespace. Returns None for empties, generic labels, and
+    single-character placeholders (`Dr. F`, `C`, etc ). Single-letter parties
+    have no disambiguation power for DD-016 merging and create
+    phantom clusters when they don't match a longer real name in
+    other contributing notes."""
     if not raw:
         return None
     s = _PARTY_STRIP_RE.sub("", raw).strip().lower()
     s = re.sub(r"\s+", " ", s).replace("&", "and")
+    if len(s) <= 1:
+        return None
     return None if not s or s in _GENERIC else s
 
 

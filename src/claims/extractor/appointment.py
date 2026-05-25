@@ -235,11 +235,18 @@ class AppointmentExtractor:
         # No party-in-quote check here under DD-019: per-note is a
         # permissive candidate generator; cross-attribution cleanup
         # lives in the per-claim reconciliation pass.
+        #
+        # Mechanical filter: drop single-character placeholders
+        # ("Dr. F" → "F" → drop) .The prompt asks the
+        # LLM to do this but flash-lite ignores the rule; the post-LLM
+        # filter is the reliable enforcement point.
         seen: set[str] = set()
         parties: list[str] = []
         for p in appt.parties:
             stripped = p.strip()
             if not stripped or stripped.lower() in seen:
+                continue
+            if len(stripped) <= 1:
                 continue
             seen.add(stripped.lower())
             parties.append(stripped)

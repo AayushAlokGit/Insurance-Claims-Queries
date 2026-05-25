@@ -86,6 +86,7 @@ class GoogleClient:
                     system_instruction=system,
                     response_mime_type="application/json",
                     response_schema=schema,
+                    temperature=0.0,
                 ),
             )
 

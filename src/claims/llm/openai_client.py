@@ -70,6 +70,7 @@ class OpenAIClient:
                     {"role": "user", "content": user},
                 ],
                 response_format=response_model,
+                temperature=0.0,
             )
 
         try:

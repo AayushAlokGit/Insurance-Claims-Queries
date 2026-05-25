@@ -14,7 +14,6 @@ Numbered, accepted design decisions. `DESIGN.md` is the polished spec these feed
 | DD-008 | Three-tier query layer (canned / raw SQL / NL→SQL) | Accepted | 2026-05-22 |
 | DD-009 | Defer eval harness from MVP | Accepted | 2026-05-22 |
 | DD-010 | Loss-neutral vocabulary (injury or illness) | Accepted | 2026-05-22 |
-| DD-011 | "Never returned to work" is a first-class event | Accepted | 2026-05-22 |
 | DD-012 | YAGNI trim of `Claim` and event taxonomy | Accepted | 2026-05-22 |
 | DD-013 | Normalizer parses headers; body preserved verbatim | Accepted | 2026-05-23 |
 | DD-014 | LLM retry: 3 attempts, jittered backoff, then drop+warn | Accepted | 2026-05-23 |
@@ -26,7 +25,7 @@ Numbered, accepted design decisions. `DESIGN.md` is the polished spec these feed
 | DD-020 | Appointment evidence is `(note_date, quote)` pairs | Accepted | 2026-05-24 |
 | DD-021 | Appointments use per-note + reconciliation, not whole-claim LLM | Accepted | 2026-05-24 |
 | DD-022 | RTW resolver merges within a ±7-day window per `(claim_id, duty_type)` | Accepted | 2026-05-24 |
-| DD-023 | Widen `(note_date, quote)` evidence pairs to RTW + RTW-terminal; rename `AppointmentEvidence` → `EventEvidence` | Accepted | 2026-05-24 |
+| DD-023 | Widen `(note_date, quote)` evidence pairs to every event type; rename `AppointmentEvidence` → `EventEvidence` | Accepted | 2026-05-24 |
 
 ---
 
@@ -40,7 +39,7 @@ Extract structured facts from prose once at ingest (LLM-assisted), store them, t
 ## DD-002 — Event-centric data model
 **Accepted · 2026-05-22**
 
-Atomic unit is a typed, dated `Event` (`appointment`, `reserve_change`, `return_to_work`, `rtw_terminal`). All four sample queries are temporal/relational; a flat one-row-per-claim schema can't express "how many times" or "how long between."
+Atomic unit is a typed, dated `Event` (`appointment`, `reserve_change`, `return_to_work`). All four sample queries are temporal/relational; a flat one-row-per-claim schema can't express "how many times" or "how long between."
 
 ---
 
@@ -100,17 +99,10 @@ Workers' comp covers discrete-event injuries *and* occupational illness/disease.
 
 ---
 
-## DD-011 — "Never returned to work" as a first-class event
-**Accepted · 2026-05-22**
-
-Add `rtw_terminal` event with `reason ∈ {ptd, deceased, separated, closed_no_rtw}` and an effective date. Q1 returns a discriminated union `returned | never_returned (reason) | pending`, never a `null`. Treating PTD/deceased/separated as `null` silently filters them from corpus averages.
-
----
-
 ## DD-012 — YAGNI trim of `Claim` and event taxonomy
 **Accepted · 2026-05-22**
 
-`Claim` keeps only: `claim_id`, `account`, `jurisdiction`, `claim_type`, `date_of_loss`, `source_file`, `ingested_at`. Event taxonomy keeps only: `reserve_change` (Q3), `appointment` (Q2/Q4), `return_to_work` (Q1), `rtw_terminal` (Q1). `work_status_change`, `loss_description`, `body_parts`, `diagnoses`, `avg_weekly_wage`, `comp_rate` dropped — no current query consumes them. DD-007 makes adding them later cheap.
+`Claim` keeps only: `claim_id`, `account`, `jurisdiction`, `claim_type`, `date_of_loss`, `source_file`, `ingested_at`. Event taxonomy keeps only: `reserve_change` (Q3), `appointment` (Q2/Q4), `return_to_work` (Q1). `work_status_change`, `loss_description`, `body_parts`, `diagnoses`, `avg_weekly_wage`, `comp_rate` dropped — no current query consumes them. DD-007 makes adding them later cheap.
 
 ---
 
@@ -173,7 +165,7 @@ Original gate: run LLM appointment extractor only on Resolution Strategy notes o
 
 **Stage 3 — deterministic dates + evidence.** Encounter date = mode of contributing dates (occurred-on > scheduled-for, earliest breaks ties). `scheduled_notice_date` = earliest contributing `note_date ≤ encounter` (excludes retrospective recaps — fixes the Q4 negative-lag bug). Evidence = union of contributors per DD-020.
 
-Resolver still handles `reserve_change`, `return_to_work`, `rtw_terminal`. Appointments bypass it; defensive warning fires if one slips through.
+Resolver still handles `reserve_change` and `return_to_work`. Appointments bypass it; defensive warning fires if one slips through.
 
 **Why.** Deterministic clustering beats LLM clustering on same-day + party-overlap (unambiguous). Per-cluster LLM has one job with focused context — DD-017 and DD-016 compliance went up materially after the split from a single all-in-one per-claim call. Date math stays rule-mechanical; LLM-chosen notice dates produced the retrospective-recap negative-lag bug.
 
@@ -213,7 +205,7 @@ Identity-merge on `(claim_id, event_date, duty_type)` kept duplicates when the L
 ## DD-023 — Widen `(note_date, quote)` evidence pairs to every event type
 **Accepted · 2026-05-24**
 
-DD-020 scoped structured `evidence: tuple[EventEvidence, ...]` to appointments only. Extend the same shape to **every** event type — `reserve_change`, `return_to_work`, `rtw_terminal` — for a uniform evidence surface. Single-source events carry a one-element tuple; merged events union one entry per contributing note (dedup by `(note_date, quote)`, sort by `note_date`). `AppointmentEvidence` renamed to `EventEvidence`. `source_note_dates` and `evidence_quote` survive as derived `@property`s on every attributes class. Q1 and Q3 outputs ship the full evidence list in place of scalar `evidence_quote` + `source_note_dates`.
+DD-020 scoped structured `evidence: tuple[EventEvidence, ...]` to appointments only. Extend the same shape to **every** event type — `reserve_change`, `return_to_work` — for a uniform evidence surface. Single-source events carry a one-element tuple; merged events union one entry per contributing note (dedup by `(note_date, quote)`, sort by `note_date`). `AppointmentEvidence` renamed to `EventEvidence`. `source_note_dates` and `evidence_quote` survive as derived `@property`s on every attributes class. Q1 and Q3 outputs ship the full evidence list in place of scalar `evidence_quote` + `source_note_dates`.
 
 ---
 

@@ -12,7 +12,6 @@ from statistics import median
 
 from claims.models import EventEvidence
 from claims.query.types import (
-    Q1NeverReturned,
     Q1Pending,
     Q1Result,
     Q1Returned,
@@ -43,10 +42,8 @@ def _today_iso() -> str:
 def q1_return_to_work(conn: Connection, claim_id: str) -> Q1Result:
     """Discriminated-union answer to "how long to return to work?".
 
-    Returned > never-returned > pending — positive RTW always
-    wins, even if a terminal event was also extracted (handles
-    the corpus pattern of a closing/permanency note that doesn't
-    know the EE has already returned)."""
+    `returned` if any return_to_work event exists; otherwise
+    `pending`."""
     dol = _date_of_loss(conn, claim_id)
 
     rtw = conn.execute(
@@ -75,32 +72,6 @@ def q1_return_to_work(conn: Connection, claim_id: str) -> Q1Result:
             event_id=rtw["event_id"],
             extraction_method=rtw["extraction_method"],
             evidence=_parse_evidence(rtw["evidence"]),
-        )
-
-    term = conn.execute(
-        """
-        SELECT event_id,
-               event_date,
-               extraction_method,
-               json_extract(attributes, '$.reason')   AS reason,
-               json_extract(attributes, '$.context')  AS context,
-               json_extract(attributes, '$.evidence') AS evidence
-        FROM event
-        WHERE claim_id = ?
-          AND event_type = 'rtw_terminal'
-        ORDER BY event_date
-        LIMIT 1
-        """,
-        (claim_id,),
-    ).fetchone()
-    if term is not None:
-        return Q1NeverReturned(
-            reason=term["reason"],
-            terminal_date=date.fromisoformat(term["event_date"]),
-            context=term["context"],
-            event_id=term["event_id"],
-            extraction_method=term["extraction_method"],
-            evidence=_parse_evidence(term["evidence"]),
         )
 
     days_open = (date.today() - dol).days

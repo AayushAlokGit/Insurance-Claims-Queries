@@ -7,7 +7,6 @@ from claims.query.queries import (
     q4_schedule_to_seen,
 )
 from claims.query.types import (
-    Q1NeverReturned,
     Q1Pending,
     Q1Result,
     Q1Returned,
@@ -22,7 +21,6 @@ from claims.query.types import (
 )
 
 __all__ = [
-    "Q1NeverReturned",
     "Q1Pending",
     "Q1Result",
     "Q1Returned",

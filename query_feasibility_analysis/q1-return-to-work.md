@@ -13,12 +13,10 @@ medical releases without confirmation) is noise the extractor must reject.
 - `Claim.date_of_loss` — the anchor (already on the claim row).
 - A `return_to_work` event — `event_date`, `duty_type` (modified / full),
   optional `role`.
-- An `rtw_terminal` event for claims that will **never** have an RTW —
-  `reason` ∈ `ptd | deceased | separated | closed_no_rtw`. Makes "never
-  returned" a recorded fact, not the absence of one (DD-011).
 
 Offers and other non-RTW states are rejected inside the LLM prompt and
-produce no event (DD-012).
+produce no event (DD-012). Q1 returns `pending` when no return event
+exists for the claim.
 
 ## 3. Where the facts live in the sample notes
 
@@ -49,11 +47,10 @@ Verified against `sample_claim_notes1.md` and `_2.md`.
 - L368: `"IE released to light duty..."` — a **release** without
   confirmation of return. Rejected.
 - L877: `"She has not returned to work since the incident."` — **explicit
-  negative RTW evidence** in an *open* claim. Not an `rtw_terminal` (the
-  claim isn't closed / PTD / deceased / separated — she's still in active
-  treatment). The LLM emits-only-positives contract correctly ignores
-  this; Q1 returns `pending` and the negative language stays out of the
-  event store.
+  negative RTW evidence** in an *open* claim still in active treatment.
+  The LLM emits-only-positives contract correctly ignores this; Q1
+  returns `pending` and the negative language stays out of the event
+  store.
 - L33/L175: `"Claim will ultimately be settled when she is placed at
   MMI"` — settlement plan, not an RTW signal.
 
@@ -108,16 +105,14 @@ cutting LLM calls by ~80% on the sample claims.
 | RTW stated as a range ("week of 11/10") | Use earliest plausible day; flag `attributes.date_precision` |
 | RTW referenced by **relative phrasing** ("for approximately 10 days" as of note date 11/21 — claim 1 L48) | Do **not** infer the date by arithmetic; rely on the dated restatement (claim 1 L9/L31) that the Resolver will merge. If no dated form exists in the file, drop with low-confidence flag rather than guess. |
 | Forward-looking confirmation of a **future** start date ("EE start date confirmed for 11/10/25" — claim 1 L67) | Prompt rejects — extract only when the return has actually occurred relative to the note date. Otherwise the same RTW gets double-extracted. |
-| Explicit negative RTW language in an **open** claim ("She has not returned to work since the incident" — claim 2 L877) | Not an `rtw_terminal` (claim is not closed / PTD / deceased / separated). LLM emits no event; Q1 returns `pending`. Negative language is not stored as evidence. |
-| Claimant will never return — PTD / deceased / resigned / settled with no RTW | Each case is an `rtw_terminal` event with the matching `reason`; Q1 returns `never_returned` |
+| Explicit negative RTW language in an **open** claim ("She has not returned to work since the incident" — claim 2 L877) | LLM emits no event; Q1 returns `pending`. Negative language is not stored as evidence. |
 
 ## 6. Computation
 
-Two lookups: the first `return_to_work` event, and if absent, the
-`rtw_terminal` event that closes the question definitively.
+One lookup: the first `return_to_work` event for the claim. Absence →
+`pending`.
 
 ```sql
--- Positive case
 SELECT c.claim_id,
        julianday(MIN(e.event_date)) - julianday(c.date_of_loss) AS days,
        MIN(e.event_date)                          AS rtw_date,
@@ -125,29 +120,22 @@ SELECT c.claim_id,
 FROM claim c JOIN event e ON e.claim_id = c.claim_id
 WHERE e.event_type = 'return_to_work'
 GROUP BY c.claim_id;
-
--- Terminal case
-SELECT claim_id, event_date,
-       json_extract(attributes, '$.reason') AS reason
-FROM event WHERE event_type = 'rtw_terminal';
 ```
 
 The canned function returns a **discriminated union**, not a nullable
-number — so the negative cases stay distinguishable downstream:
+number — so the `pending` case stays distinguishable downstream:
 
 ```python
 # src/claims/query/queries.py::q1
 Q1Result = (
     Q1Returned(status="returned", days, rtw_date, duty_type)
-    | Q1NeverReturned(status="never_returned", reason, terminal_date)
     | Q1Pending(status="pending", days_open)
 )
 ```
 
 The union forces the consumer to decide how each population is treated.
-A `WHERE NOT NULL` over a nullable number would silently drop
-PTD/deceased/separated claims and understate recovery time at corpus
-scale.
+A `WHERE NOT NULL` over a nullable number would silently drop claims
+without an RTW event and understate recovery time at corpus scale.
 
 ### 6.1 The `pending` case is intentionally undifferentiated
 
@@ -184,9 +172,6 @@ Q1 alone is responsible for:
 
 - **`return_to_work` as a distinct event type** — Q1 needs *the* RTW
   date, not a stream of status transitions.
-- **`rtw_terminal` as a first-class definitive negative** (DD-011) —
-  "this claim will never have an RTW" lives in the timeline, not in
-  query logic. Generalizes to any query with a meaningful negative.
 - **The LLM extractor existing at all** — Q3 doesn't need one; Q2/Q4
   could limp by with rules; Q1 cannot.
 - **The "explicit vs. discussed" prompt-contract pattern** that

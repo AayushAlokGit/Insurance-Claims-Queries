@@ -8,7 +8,7 @@ worked examples drawn from the sample claim notes.
 If you're reading the system for the first time, read this *after*
 `claims file analysis.md` (what's in the data) and *before* the pipeline
 sections of `DESIGN.md` (how the data flows). Decisions made here are
-recorded in `design-decisions.md` (DD-002, DD-003, DD-007, DD-010, DD-011).
+recorded in `design-decisions.md` (DD-002, DD-003, DD-007, DD-010).
 
 ---
 
@@ -296,34 +296,7 @@ coordinator."*
   distinction is ever needed, it's a pure JSON `attributes` addition,
   no schema change (DD-007).
 
-### 4.4 `rtw_terminal` — Q1 definitive negative (DD-011)
-
-Source: *"Claim closed via lump-sum settlement on 4/12/26; no RTW
-recorded. PPD 35% awarded."*
-
-```json
-{
-  "reason": "closed_no_rtw",
-  "context": "lump-sum settlement; PPD 35% awarded",
-  "source_note_dates": ["2026-04-12"],
-  "evidence_quote": "Claim closed via lump-sum settlement on 4/12/26; no RTW recorded"
-}
-```
-
-**Notes:**
-- `reason` enum: `ptd | deceased | separated | closed_no_rtw`.
-- At most one per claim. Mutually exclusive with `return_to_work` for
-  most consumers — Q1's canned function checks for either, returning a
-  discriminated union (`returned | never_returned | pending`).
-- `source_note_dates` + `evidence_quote` are the debugging pair:
-  every contributing note date and the verbatim text that justified
-  the terminal declaration. Most terminals are single-source, so the
-  tuple usually has one entry.
-- Modeled as an event, not a Claim column, so every future query
-  (*"PTD rate by jurisdiction,"* *"average time-to-settlement for
-  non-returners"*) reads it as a normal aggregation.
-
-### 4.5 Future event types — sketched, not built in MVP
+### 4.4 Future event types — sketched, not built in MVP
 
 These appear in the taxonomy with `attributes` shapes documented, but no
 extractor is built for them in v1. Adding them later is **purely
@@ -464,7 +437,7 @@ cleanly?
 
 | Query | What it reads | Shape |
 |---|---|---|
-| Q1 | `claim.date_of_loss`, `events WHERE event_type IN ('return_to_work', 'rtw_terminal')` | Per-claim lookup; discriminated union return |
+| Q1 | `claim.date_of_loss`, first `event WHERE event_type = 'return_to_work'` | Per-claim lookup; discriminated union return |
 | Q2 | `COUNT(*) FROM events WHERE event_type = 'appointment' AND json_extract(attributes,'$.status') = 'attended'` | Per-claim count |
 | Q3 | Window function `LAG` over `events WHERE event_type = 'reserve_change'` ordered by `(claim_id, bucket, event_date)` | Per-claim, per-bucket series |
 | Q4 | `events WHERE event_type = 'appointment'` with both date attributes populated; `julianday()` diff | Per-appointment list + distribution summary |
@@ -488,5 +461,4 @@ For traceability:
 - **DD-003** — Scope to query-answering; no raw-note preservation
 - **DD-007** — JSON `attributes` column for type-specific payloads
 - **DD-010** — Loss-neutral vocabulary; `claim_type` axis from day one
-- **DD-011** — `rtw_terminal` as first-class definitive negative
 - **DD-012** — Trim `Claim` and event taxonomy to query-minimum (YAGNI)

@@ -28,17 +28,6 @@ class Q1Returned(BaseModel):
     evidence: list[EventEvidence] = Field(default_factory=list)
 
 
-class Q1NeverReturned(BaseModel):
-    model_config = ConfigDict(frozen=True)
-    status: Literal["never_returned"] = "never_returned"
-    reason: Literal["ptd", "deceased", "separated", "closed_no_rtw"]
-    terminal_date: date
-    context: str | None = None
-    event_id: str | None = None
-    extraction_method: str | None = None
-    evidence: list[EventEvidence] = Field(default_factory=list)
-
-
 class Q1Pending(BaseModel):
     model_config = ConfigDict(frozen=True)
     status: Literal["pending"] = "pending"
@@ -46,7 +35,7 @@ class Q1Pending(BaseModel):
 
 
 Q1Result = Annotated[
-    Union[Q1Returned, Q1NeverReturned, Q1Pending],
+    Union[Q1Returned, Q1Pending],
     Field(discriminator="status"),
 ]
 

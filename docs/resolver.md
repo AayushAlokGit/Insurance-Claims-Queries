@@ -78,7 +78,6 @@ affects the match key happens here.
 | `reserve_change` | `(claim_id, canonical_bucket, source_note_id)` — each Reserving note is its own event |
 | `appointment` | DD-016: `(claim_id, encounter_date exact, parties_overlap ≥ 1)`; `encounter_date = scheduled_for_date ?? occurred_on`; see §6 for the parties-overlap rule (supersedes the earlier `canonical_provider, anchor_date ± window` design) |
 | `return_to_work` | `(claim_id, event_date, duty_type)` |
-| `rtw_terminal` | `(claim_id, reason)` — at most one per claim |
 
 **Pass 3 — Group and merge.** Per type:
 
@@ -105,9 +104,6 @@ affects the match key happens here.
   or forward-confirmation form, keep the dated one and drop the others.
   The Q1 prompt contract should reject the weaker forms upstream; this
   is a safety net.
-- **`rtw_terminal`** — if multiple `reason`s appear, keep the most
-  definitive (`deceased` > `ptd` > `separated` > `closed_no_rtw`) and
-  flag as a data-quality conflict.
 
 **Pass 4 — Derive cross-event fields.** Computable only post-merge:
 
@@ -139,7 +135,6 @@ Live shapes: `reserve_change` → identity by
 `(claim_id, canonical_bucket, source_note)`; `appointment` →
 parties-set merge (DD-016: `(encounter_date exact, parties_overlap)`,
 single strategy, no Q2/Q4 split); `return_to_work` →
-identity-with-form-priority; `rtw_terminal` →
 identity-with-precedence.
 
 **Why this pattern:**
@@ -254,7 +249,6 @@ silent coercion.
 
 | Failure | Behavior |
 |---|---|
-| Two `rtw_terminal` candidates, different `reason` | Keep most definitive; flag `rtw_terminal_conflict` |
 | Hanging `scheduled` event (no visit within 60 days) | Kept as `scheduled` — evidence-only promotion rule forbids silent demotion; excluded from Q4 by lack of an `occurred_on` |
 | `delta = 0` reserve change | Dropped silently — documented restatement behavior, not an error |
 | Same-minute reserve updates, different buckets (claim 1 L392+L396) | Both kept — different match keys, never group |

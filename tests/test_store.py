@@ -16,7 +16,6 @@ from claims.models import (
     AppointmentAttributes,
     Claim,
     Event,
-    RTWTerminalAttributes,
     ReserveChangeAttributes,
     ReturnToWorkAttributes,
 )
@@ -102,17 +101,6 @@ def test_events_round_trip_all_types(conn: Connection) -> None:
             attributes=ReturnToWorkAttributes(
                 duty_type="modified",
                 role="scheduling coordinator",
-            ),
-            extraction_method="llm",
-        ),
-        Event(
-            event_id="e4",
-            claim_id="1-29RT",
-            event_type="rtw_terminal",
-            event_date=date(2026, 4, 12),
-            attributes=RTWTerminalAttributes(
-                reason="closed_no_rtw",
-                context="lump-sum settlement; PPD 35% awarded",
             ),
             extraction_method="llm",
         ),

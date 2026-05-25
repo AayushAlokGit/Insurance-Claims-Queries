@@ -1,4 +1,4 @@
-"""Phase 10: RTW + RTW-terminal extractor tests.
+"""Phase 10: RTW extractor tests.
 
 All offline — uses FakeLLMs returning pinned payloads. Covers
 the discriminated-union empty case (null payload → no events),
@@ -17,16 +17,7 @@ from claims.extractor.rtw import (
     ReturnToWorkExtractor,
     _ReturnToWorkPayload,
 )
-from claims.extractor.rtw_terminal import (
-    RTWTerminalExtractionResponse,
-    RtwTerminalExtractor,
-    _TerminalPayload,
-)
-from claims.models import (
-    Note,
-    ReturnToWorkAttributes,
-    RTWTerminalAttributes,
-)
+from claims.models import Note, ReturnToWorkAttributes
 
 T = TypeVar("T", bound=BaseModel)
 
@@ -113,60 +104,3 @@ def test_rtw_bad_evidence_quote_dropped() -> None:
         )
     )
     assert ReturnToWorkExtractor(llm).extract(note) == []
-
-
-# --- RTW terminal extractor -------------------------------------
-
-
-def test_terminal_prefilter_signals() -> None:
-    e = RtwTerminalExtractor(
-        _FakeLLM(RTWTerminalExtractionResponse(rtw_terminal=None))
-    )
-    assert e.can_handle(_note("Claimant deceased 09/2024"))
-    assert e.can_handle(_note("declared PTD per Dr. X"))
-    assert e.can_handle(_note("claim closed via lump-sum settlement"))
-    assert e.can_handle(_note("EE was separated effective DATE"))
-    assert not e.can_handle(_note("Routine follow-up."))
-
-
-def test_terminal_positive_emits_one_event() -> None:
-    note = _note(
-        "Claim closed via lump-sum settlement on 4/12/26; no RTW recorded.",
-        note_date=date(2026, 4, 12),
-    )
-    llm = _FakeLLM(
-        RTWTerminalExtractionResponse(
-            rtw_terminal=_TerminalPayload(
-                reason="closed_no_rtw",
-                context="lump-sum settlement",
-                evidence_quote="Claim closed via lump-sum settlement on 4/12/26; no RTW recorded.",
-            )
-        )
-    )
-    [event] = RtwTerminalExtractor(llm).extract(note)
-    assert event.event_type == "rtw_terminal"
-    assert event.event_date == date(2026, 4, 12)
-    attrs = event.attributes
-    assert isinstance(attrs, RTWTerminalAttributes)
-    assert attrs.reason == "closed_no_rtw"
-    assert attrs.context == "lump-sum settlement"
-
-
-def test_terminal_null_payload_yields_no_events() -> None:
-    note = _note("permanency stipulation in negotiation")
-    llm = _FakeLLM(RTWTerminalExtractionResponse(rtw_terminal=None))
-    assert RtwTerminalExtractor(llm).extract(note) == []
-
-
-def test_terminal_bad_evidence_quote_dropped() -> None:
-    note = _note("Claim closed via lump-sum settlement on 4/12/26.")
-    llm = _FakeLLM(
-        RTWTerminalExtractionResponse(
-            rtw_terminal=_TerminalPayload(
-                reason="closed_no_rtw",
-                context=None,
-                evidence_quote="hallucinated quote not in body",
-            )
-        )
-    )
-    assert RtwTerminalExtractor(llm).extract(note) == []

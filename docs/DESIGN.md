@@ -44,7 +44,7 @@ sample queries tells us exactly which facts the schema must capture.
 
 | # | Sample query | Facts required | Where it lives in the notes |
 |---|--------------|----------------|------------------------------|
-| 1 | How long to return to work? | `date_of_loss`, first **return-to-work** event (date + duty type), and an **rtw_terminal** event for claims that will never have an RTW (DD-011) | Claim header / "Description of loss"; "EE returned to modified duty on 11/10/25"; "light duty offer effective 8/25"; "she has not returned to work since the incident" |
+| 1 | How long to return to work? | `date_of_loss`, first **return-to-work** event (date + duty type) | Claim header / "Description of loss"; "EE returned to modified duty on 11/10/25"; "light duty offer effective 8/25"; "she has not returned to work since the incident" |
 | 2 | How many appointments attended? | **appointment** events with a `status` (attended / scheduled / missed / cancelled) | Scheduling notices, embedded medical records (`Date of Appointment:`), "she attended her follow-up", "unable to attend her appointments scheduled for 08/11 and 08/13" |
 | 3 | How many reserve changes? By how much? | **reserve_change** events: bucket, previous amount, new amount, delta | `Activity: Reserving` notes — strict template |
 | 4 | Time from scheduled to seen? | **appointment** events carrying `scheduled_notice_date` (when the schedule was created), `scheduled_for_date` (booked-for date — matching key), and `occurred_on` | Scheduling notice date vs. actual visit date — two separate notes about the same appointment |
@@ -106,7 +106,6 @@ not built (DD-012; mirrors `data-modeling.md §4.5`).
 | `reserve_change` | `bucket` ("Indemnity / Lost Time"), `previous_amount`, `new_amount`, `delta` | Q3 |
 | `appointment` (medical only) | `parties` (DD-016), `specialty`, `scheduled_notice_date`, `scheduled_for_date`, `occurred_on`, `status`, `appointment_type`, `source_note_dates` (DD-017; tuple of all contributing notes) | Q2, Q4 |
 | `return_to_work` | `duty_type` (modified / full), `role` | Q1 |
-| `rtw_terminal` | `reason` (`ptd` / `deceased` / `separated` / `closed_no_rtw`) | Q1 (definitive negative) |
 
 *Future — sketched, not built:*
 
@@ -236,7 +235,7 @@ determinism where determinism is possible and intelligence where it's required.
 
 **See `extractor.md` for the full catalog of active extractors
 (`ReserveChangeExtractor`, `AppointmentMarkerExtractor` (rule fast-path), `AppointmentExtractor` (LLM general path),
-`ReturnToWorkExtractor`, `RtwTerminalExtractor`), the LLM contract in detail
+`ReturnToWorkExtractor`), the LLM contract in detail
 with worked examples, multi-extractor coordination on a single note, failure
 modes, safety nets, and the testability story.**
 
@@ -286,8 +285,8 @@ The brief explicitly rewards a narrow, well-built slice over broad and shallow.
 
 **In scope**
 - The 4 sample queries, end to end, working on both sample claims.
-- Event taxonomy covering the four active types: `reserve_change`,
-  `appointment`, `return_to_work`, `rtw_terminal`. Other types (`mmi`,
+- Event taxonomy covering the three active types: `reserve_change`,
+  `appointment`, `return_to_work`. Other types (`mmi`,
   `surgery`, `diagnostic_study`, `litigation_update`, `work_status_change`)
   are sketched but not built — see DD-012 and `data-modeling.md §4.5`.
 - Hybrid extraction; SQLite store; canned + raw-SQL query paths.

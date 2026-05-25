@@ -62,7 +62,7 @@ stay distinguishable.
 
 | Query | Question | Return shape |
 |---|---|---|
-| `q1` | How long did it take to return to work? | Discriminated union: `returned` \| `never_returned` \| `pending` |
+| `q1` | How long did it take to return to work? | Discriminated union: `returned` \| `pending` |
 | `q2` | How many appointments were attended? | List of attended appointments + count |
 | `q3` | What were the reserve changes? | Per-bucket list of swings with `previous → new → delta` |
 | `q4` | How long does it take to see a provider once scheduled? | Per-visit lag list + median / p90 / mean distribution |
@@ -100,8 +100,7 @@ sample_claim_notes/X.md
    ├─ ReserveChangeExtractor       (rule, regex)
    ├─ AppointmentMarkerExtractor   (rule, regex)
    ├─ AppointmentExtractor         (LLM, structured outputs)
-   ├─ ReturnToWorkExtractor        (LLM, strict evidence-only)
-   └─ RtwTerminalExtractor         (LLM, first-class negative)
+   └─ ReturnToWorkExtractor        (LLM, strict evidence-only)
         │
         ▼
    Resolver            dedup + status promotion + delta derivation
@@ -141,7 +140,6 @@ A few load-bearing decisions worth highlighting:
 - **DD-006**: per-note extraction. Cross-note merge happens in the Resolver, never inside an LLM prompt.
 - **DD-007**: JSON `attributes` column with a promotion path. Schema-additive migrations only.
 - **DD-010**: loss-neutral vocabulary (`date_of_loss`, `claim_type ∈ {injury, illness}`).
-- **DD-011**: first-class negatives (`rtw_terminal` event, not a NULL).
 - **DD-013**: Normalizer preserves body text verbatim — the LLM's `evidence_quote` substring check depends on it.
 - **DD-014**: bounded retry with ±50% jitter on LLM calls.
 - **DD-015**: per-note extraction parallelized (default 4 workers; honors RPM ceiling on Gemini free tier).
@@ -242,7 +240,7 @@ py -3.12 -m uv run pytest
 # (hits the live LLM — burns quota)
 py -3.12 -m uv run python scripts/try_appointment_llm.py --claim 1 --limit 3
 
-# Smoke-test the RTW + RTW-terminal extractors similarly
+# Smoke-test the RTW extractor similarly
 py -3.12 -m uv run python scripts/try_rtw_llm.py --claim 1 --limit 5
 
 # Summarize all four queries against a populated DB in human format

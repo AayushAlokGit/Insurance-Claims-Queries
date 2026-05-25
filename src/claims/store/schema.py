@@ -24,7 +24,7 @@ CREATE TABLE IF NOT EXISTS event (
     event_id          TEXT PRIMARY KEY,
     claim_id          TEXT NOT NULL REFERENCES claim(claim_id) ON DELETE CASCADE,
     event_type        TEXT NOT NULL CHECK (event_type IN (
-        'reserve_change', 'appointment', 'return_to_work', 'rtw_terminal'
+        'reserve_change', 'appointment', 'return_to_work'
     )),
     event_date        TEXT NOT NULL,
     attributes        TEXT NOT NULL,

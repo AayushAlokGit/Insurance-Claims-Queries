@@ -4,7 +4,7 @@ Under DD-019, appointments bypass the resolver — they are
 reconciled in `claims.extractor.reconciliation` before reaching
 this stage. The resolver handles:
 - reserve_change: cross-note delta derivation, drop delta=0
-- return_to_work / rtw_terminal: identity-merge / pass-through
+- return_to_work: identity-merge
 """
 
 from __future__ import annotations
@@ -38,11 +38,6 @@ def resolve(events: list[Event]) -> list[Event]:
                 len(outgoing),
             )
         out.extend(outgoing)
-    # rtw_terminal currently passes through unchanged.
-    terminals = by_type.get("rtw_terminal", [])
-    if terminals:
-        _log.debug("resolve rtw_terminal: %d passthrough", len(terminals))
-    out.extend(terminals)
     # Defensive: an appointment slipping into resolve() is a bug
     # under DD-019. Log loudly rather than swallowing.
     stragglers = by_type.get("appointment", [])

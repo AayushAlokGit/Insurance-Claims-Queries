@@ -17,12 +17,10 @@ from claims.models import (
     AppointmentAttributes,
     Claim,
     Event,
-    RTWTerminalAttributes,
     ReserveChangeAttributes,
     ReturnToWorkAttributes,
 )
 from claims.query import (
-    Q1NeverReturned,
     Q1Pending,
     Q1Returned,
     q1_return_to_work,
@@ -86,57 +84,6 @@ def test_q1_returned(conn: Connection) -> None:
     assert result.duty_type == "modified"
     # Dec 21 2024 → Nov 10 2025 is 324 days.
     assert result.days == 324
-
-
-def test_q1_returned_wins_when_terminal_also_present(conn: Connection) -> None:
-    """The smoke-test scenario: an LLM-emitted closed_no_rtw is
-    in the data, but a positive RTW also exists. Positive wins."""
-    _claim(conn)
-    insert_event(
-        conn,
-        Event(
-            event_id="rtw",
-            claim_id="C",
-            event_type="return_to_work",
-            event_date=date(2025, 11, 10),
-            attributes=ReturnToWorkAttributes(duty_type="modified"),
-            extraction_method="llm",
-        ),
-    )
-    insert_event(
-        conn,
-        Event(
-            event_id="term",
-            claim_id="C",
-            event_type="rtw_terminal",
-            event_date=date(2026, 1, 6),
-            attributes=RTWTerminalAttributes(
-                reason="closed_no_rtw", context="settlement"
-            ),
-            extraction_method="llm",
-        ),
-    )
-    result = q1_return_to_work(conn, "C")
-    assert isinstance(result, Q1Returned)
-
-
-def test_q1_never_returned(conn: Connection) -> None:
-    _claim(conn)
-    insert_event(
-        conn,
-        Event(
-            event_id="term",
-            claim_id="C",
-            event_type="rtw_terminal",
-            event_date=date(2026, 4, 12),
-            attributes=RTWTerminalAttributes(reason="ptd"),
-            extraction_method="llm",
-        ),
-    )
-    result = q1_return_to_work(conn, "C")
-    assert isinstance(result, Q1NeverReturned)
-    assert result.reason == "ptd"
-    assert result.terminal_date == date(2026, 4, 12)
 
 
 def test_q1_pending(conn: Connection) -> None:

@@ -93,12 +93,6 @@ def diff_q1(expected: dict, actual: dict) -> Diff:
                 fails.append(
                     f"{k}: expected {expected.get(k)!r}, got {actual.get(k)!r}"
                 )
-    elif status == "never_returned":
-        for k in ("reason", "terminal_date"):
-            if expected.get(k) != actual.get(k):
-                fails.append(
-                    f"{k}: expected {expected.get(k)!r}, got {actual.get(k)!r}"
-                )
     elif status == "pending":
         # days_open drifts as today() advances — allow ±1
         e = expected.get("days_open", 0)

@@ -6,7 +6,7 @@ per event_type; merges duplicates; derives cross-event fields.
 Appointments do not flow through the resolver under DD-019 —
 they are handled by per-claim reconciliation (see
 `claims.extractor.reconciliation`). The resolver still handles
-reserve_change, return_to_work, and rtw_terminal.
+reserve_change and return_to_work.
 """
 
 from claims.resolver.reserve_change import resolve_reserve_changes

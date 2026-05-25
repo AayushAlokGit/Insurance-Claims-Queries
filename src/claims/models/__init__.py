@@ -18,8 +18,6 @@ from claims.models.event import (
     ExtractionMethod,
     ReserveChangeAttributes,
     ReturnToWorkAttributes,
-    RTWTerminalAttributes,
-    RTWTerminalReason,
 )
 from claims.models.note import Note
 
@@ -34,8 +32,6 @@ __all__ = [
     "EventType",
     "ExtractionMethod",
     "Note",
-    "RTWTerminalAttributes",
-    "RTWTerminalReason",
     "ReserveChangeAttributes",
     "ReturnToWorkAttributes",
 ]

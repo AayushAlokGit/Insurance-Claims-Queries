@@ -1,7 +1,7 @@
 """The Event entity and its discriminated-union attribute payloads.
 
-See data-modeling.md §3-§4. Four active event types per DD-012:
-reserve_change, appointment, return_to_work, rtw_terminal.
+See data-modeling.md §3-§4. Three active event types per DD-012:
+reserve_change, appointment, return_to_work.
 
 The `attributes` field is a discriminated union (tagged by the
 inner `type` field). The outer `event_type` on Event must match
@@ -18,7 +18,6 @@ EventType = Literal[
     "reserve_change",
     "appointment",
     "return_to_work",
-    "rtw_terminal",
 ]
 
 ExtractionMethod = Literal["rule", "llm", "merged"]
@@ -37,7 +36,6 @@ AppointmentType = Literal[
 ]
 
 RTWDutyType = Literal["modified", "full"]
-RTWTerminalReason = Literal["ptd", "deceased", "separated", "closed_no_rtw"]
 
 
 class _AttributesBase(BaseModel):
@@ -50,7 +48,7 @@ class EventEvidence(_AttributesBase):
     Used by every event type — single-source events have a
     one-element tuple, merged/reconciled events union one entry
     per contributing note. Uniform across reserve_change,
-    appointment, return_to_work, and rtw_terminal (DD-020/023)."""
+    appointment, and return_to_work (DD-020/023)."""
 
     note_date: date
     quote: str
@@ -139,31 +137,10 @@ class ReturnToWorkAttributes(_AttributesBase):
         return self.evidence[0].quote if self.evidence else None
 
 
-class RTWTerminalAttributes(_AttributesBase):
-    """Q1 definitive negative — DD-011 (data-modeling.md §4.4).
-    `evidence` holds `(note_date, quote)` pairs — one per
-    contributing note. `source_note_dates` and `evidence_quote`
-    survive as derived properties."""
-
-    type: Literal["rtw_terminal"] = "rtw_terminal"
-    reason: RTWTerminalReason
-    context: str | None = None
-    evidence: tuple[EventEvidence, ...] = ()
-
-    @property
-    def source_note_dates(self) -> tuple[date, ...]:
-        return tuple(sorted({e.note_date for e in self.evidence}))
-
-    @property
-    def evidence_quote(self) -> str | None:
-        return self.evidence[0].quote if self.evidence else None
-
-
 EventAttributes = Annotated[
     ReserveChangeAttributes
     | AppointmentAttributes
-    | ReturnToWorkAttributes
-    | RTWTerminalAttributes,
+    | ReturnToWorkAttributes,
     Field(discriminator="type"),
 ]
 

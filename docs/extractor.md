@@ -249,23 +249,6 @@ tuning that.
   "we will explore RTW options" cannot be regex'd. Evidence-only
   extraction is the difference between a Q1 answer and a Q1 lie.
 
-### 5.5 `RtwTerminalExtractor` (LLM)
-
-- **Triggers on:** body contains `/never returned|permanent total|
-  PTD|deceased|passed away|terminated|separated|claim closed/i`.
-- **Mechanism:** prompt asks for `{rtw_terminal: null | {reason}}`
-  where `reason ∈ {ptd, deceased, separated, closed_no_rtw}`.
-  Requires positive evidence of a terminal state (DD-011).
-- **Emits:** at most one `rtw_terminal` per note.
-- **Why LLM and why a separate extractor:** terminal states are
-  expressed in many surface forms ("she has not returned to work
-  since the incident", "claimant deceased 09/2024", "PTD per Dr.
-  Marek"). A single extractor with one schema is more reliable
-  than coercing this into the RTW extractor's `rtw: null` branch
-  — they're semantically distinct events, and DD-011 treats
-  "never returned" as a first-class positive event, not the
-  absence of an RTW.
-
 ---
 
 ## 6. The LLM contract — four principles that keep it honest

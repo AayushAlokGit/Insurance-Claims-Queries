@@ -40,8 +40,6 @@ def main() -> int:
     print(f"\nQ1: {q1.status}")
     if q1.status == "returned":
         print(f"  days={q1.days}  rtw_date={q1.rtw_date}  duty={q1.duty_type}")
-    elif q1.status == "never_returned":
-        print(f"  reason={q1.reason}  terminal_date={q1.terminal_date}")
     else:
         print(f"  days_open={q1.days_open}")
 

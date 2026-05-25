@@ -31,32 +31,10 @@
 {
   "appointments": [
     {
-      "date": "2025-01-03",
-      "status": "attended",
-      "parties": [
-        "Regional Medical Center"
-      ],
-      "specialty": null,
-      "appointment_type": null,
-      "event_id": "bddbb54e-3915-4ef3-b2c9-0c535c24431e",
-      "extraction_method": "merged",
-      "evidence": [
-        {
-          "note_date": "2025-02-06",
-          "quote": "Another evaluation was completed on 1/6/25. Improvement noted."
-        },
-        {
-          "note_date": "2025-02-06",
-          "quote": "At the 1/3/25 inpatient follow-up, the claimant reported that right lower extremity symptoms had decreased relative to the left and had improved following surgery."
-        }
-      ]
-    },
-    {
       "date": "2025-02-05",
       "status": "attended",
       "parties": [
-        "Harmon",
-        "Ruiz"
+        "Harmon"
       ],
       "specialty": null,
       "appointment_type": null,
@@ -238,6 +216,27 @@
       ]
     },
     {
+      "date": "2025-04-02",
+      "status": "attended",
+      "parties": [
+        "Alliance Imaging"
+      ],
+      "specialty": null,
+      "appointment_type": null,
+      "event_id": "00000000-0000-0000-0000-000000040002",
+      "extraction_method": "merged",
+      "evidence": [
+        {
+          "note_date": "2025-04-03",
+          "quote": "DOS: 4-2-25\nProvider/Facility: Alliance Imaging"
+        },
+        {
+          "note_date": "2025-05-06",
+          "quote": "Cervical MRI on 4-2-25 showed postoperative changes at C4-5 and C5-6, continued foraminal narrowing on the left at C5-6, bilateral neural foraminal stenosis at C3-4."
+        }
+      ]
+    },
+    {
       "date": "2025-04-11",
       "status": "attended",
       "parties": [
@@ -321,6 +320,23 @@
       ]
     },
     {
+      "date": "2025-05-10",
+      "status": "attended",
+      "parties": [
+        "Valley PT Group"
+      ],
+      "specialty": null,
+      "appointment_type": null,
+      "event_id": "00000000-0000-0000-0000-000000051000",
+      "extraction_method": "merged",
+      "evidence": [
+        {
+          "note_date": "2025-05-22",
+          "quote": "Date of Appointment: 5-10-25\nClinic: Valley PT Group\nSpecialty: Physical Therapy\nCurrent complaints: Patient c/o tightness in neck and upper back area. Reports pain 8-9/10 on cervical spine and upper back. C/o pain in lower back area. Has difficulty with prolonged standing. Assessment: Patient continues to show improvement with physical therapy. Patient tolerated treatment and exercises today."
+        }
+      ]
+    },
+    {
       "date": "2025-05-16",
       "status": "attended",
       "parties": [
@@ -379,23 +395,6 @@
         {
           "note_date": "2025-05-30",
           "quote": "She attended a follow-up with neurologist, Dr. Vega yesterday. He has released her to MMI from a neurological standpoint."
-        }
-      ]
-    },
-    {
-      "date": "2025-06-02",
-      "status": "attended",
-      "parties": [
-        "Vega"
-      ],
-      "specialty": null,
-      "appointment_type": null,
-      "event_id": "1f06f5ee-8a08-4596-ac01-cd08bc229766",
-      "extraction_method": "merged",
-      "evidence": [
-        {
-          "note_date": "2025-05-30",
-          "quote": "I traveled to Dr. Vega's office today, June 2nd to attend the scheduled follow-up appointment with Patient A. Patient A presented to the appointment in the wheelchair accompanied by her older son. She stated she has intermittent headaches and dizziness when exerting herself at PT. Pain is 5/10. On exam, her bilateral lower extremities are still weak. Dr. Vega feels that she has reached MMI from a neurological standpoint. He discharged her from his care and she should follow-up only if needed."
         }
       ]
     },
@@ -482,6 +481,39 @@
       ]
     },
     {
+      "date": "2025-06-27",
+      "status": "attended",
+      "parties": [
+        "Harmon"
+      ],
+      "specialty": null,
+      "appointment_type": null,
+      "event_id": "00000000-0000-0000-0000-000000062700",
+      "extraction_method": "merged",
+      "evidence": [
+        {
+          "note_date": "2025-06-24",
+          "quote": "Claimant has a follow-up tomorrow 6-27-25 at 10:30am EST"
+        },
+        {
+          "note_date": "2025-06-26",
+          "quote": "Date of Appointment: 6-27-25\nNext Office Visit: 7-25-25 at 11am\nName of physician: Dr. Harmon\nClinic: Orthopedic & Spine Associates\nSpecialty: Spine surgery"
+        },
+        {
+          "note_date": "2025-06-26",
+          "quote": "She attended her follow-up with Dr. Harmon."
+        },
+        {
+          "note_date": "2025-06-27",
+          "quote": "Dr. Harmon reviewed EMG with EE on 6-27-25."
+        },
+        {
+          "note_date": "2025-08-09",
+          "quote": "A follow-up with Dr. Harmon was conducted on 6-27-25."
+        }
+      ]
+    },
+    {
       "date": "2025-07-17",
       "status": "attended",
       "parties": [
@@ -549,6 +581,44 @@
       ]
     },
     {
+      "date": "2025-08-22",
+      "status": "attended",
+      "parties": [
+        "Harmon"
+      ],
+      "specialty": null,
+      "appointment_type": null,
+      "event_id": "00000000-0000-0000-0000-000000082200",
+      "extraction_method": "merged",
+      "evidence": [
+        {
+          "note_date": "2025-08-21",
+          "quote": "She attended her scheduled follow-up yesterday."
+        },
+        {
+          "note_date": "2025-08-21",
+          "quote": "Date of Appointment: 8-22-25\nNext Office Visit: 9-19-25\nName of physician: Dr. Harmon\nClinic: Orthopedic & Spine Associates\nSpecialty: Spine"
+        }
+      ]
+    },
+    {
+      "date": "2025-09-19",
+      "status": "attended",
+      "parties": [
+        "Harmon"
+      ],
+      "specialty": null,
+      "appointment_type": null,
+      "event_id": "00000000-0000-0000-0000-000000091900",
+      "extraction_method": "merged",
+      "evidence": [
+        {
+          "note_date": "2025-09-19",
+          "quote": "Date of Appointment: 9-19-25\nNext Office Visit: 11-14-25\nName of physician: Dr. Harmon\nClinic: Orthopedic & Spine Associates\nSpecialty: Spine"
+        }
+      ]
+    },
+    {
       "date": "2025-10-14",
       "status": "attended",
       "parties": [
@@ -608,7 +678,7 @@
       ]
     }
   ],
-  "count": 22
+  "count": 25
 }
 
 === q3 ===

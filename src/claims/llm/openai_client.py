@@ -24,6 +24,14 @@ T = TypeVar("T", bound=BaseModel)
 
 DEFAULT_MODEL = "gpt-4o-2024-08-06"
 
+# Hard per-request ceiling. Without an explicit timeout, a stuck
+# TCP connection (network blip, DNS failure) blocks the worker
+# thread until OS-level keepalive teardown — observed to hang an
+# ingest for 12+ minutes on a transient DNS outage. 60s is generous
+# for our structured-output calls; past that the retry layer should
+# take over.
+_REQUEST_TIMEOUT_S = 60.0
+
 
 class OpenAIClient:
     def __init__(
@@ -71,6 +79,7 @@ class OpenAIClient:
                 ],
                 response_format=response_model,
                 temperature=0.0,
+                timeout=_REQUEST_TIMEOUT_S,
             )
 
         try:

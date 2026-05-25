@@ -88,6 +88,35 @@ Each canned query returns either a structured object or a distribution — never
 
 ---
 
+## Evals
+
+Two-layer test pyramid, both opt-in via `pytest --eval` (gated by `@pytest.mark.eval`; default `pytest` skips them so unit tests stay fast).
+
+| Layer | Path | Scope | Latency | Purpose |
+|---|---|---|---|---|
+| Layer 1 — golden regression | `tests/eval/test_golden.py` | Full pipeline on both sample claims, all 4 queries | ~85s when API is fresh; hangs on Gemini rate-limit (15 RPM free tier) | End-to-end signal; catches reconciliation + cross-stage interactions |
+| Layer 2 — per-extractor | `tests/eval/test_appointment_extractor.py` + `appointment_fixtures.py` | One note → extractor → expected candidates | sub-10s | Fast inner loop for prompt iteration |
+
+**Golden outputs** live in `tests/golden/<claim_id>.json` and are sectioned by `=== qN ===` delimiters. **Layer 1 pass criteria** mix aggregate recall/precision floors with a hard `REQUIRED_APPOINTMENTS` list (in `tests/eval/comparators.py`) — specific known-must-pass cases that aggregate metrics could otherwise mask.
+
+**Layer 2 fixtures** are named with an issue prefix (A* = "attended" recall cases, B* = bare past tense, F* = false-positive scenarios). Each fixture documents the real-note pattern it captures and references the issue ID from `docs/extraction-improvement-roadmap.md`.
+
+**Workflow when a Layer 1 failure surfaces:**
+1. Diagnose against the source notes (`sample_claim_notes/sample_claim_notes{1,2}.md`).
+2. Write a Layer 2 fixture that reproduces the failure on a single note.
+3. Fix the prompt/code; confirm the fixture passes.
+4. Re-run Layer 1 to verify the downstream metric moves.
+
+**Caveats baked into the setup:**
+- **N=2 claims.** Both Layer 1 goldens are from the same author. There is no held-out set; Layer 2 fixtures are authored from the same notes Layer 1 judges. Passing fixtures ≠ generalization; treat them as regression tests, not evidence of robustness.
+- **Goldens are curator-chosen.** When sources contradict (e.g. claim 1's 8-22 Harmon vs "yesterday" email on 8/21), the golden picks one. A Layer 1 failure is sometimes the golden being wrong, not the system.
+- **temp=0 ≠ bit-deterministic.** Both LLM clients are pinned to `temperature=0.0`, which reduces but does not eliminate stochasticity. A "passing" fixture passes with high probability, not certainty.
+- **Rate limits.** Gemini free-tier flash-lite is 15 RPM. Back-to-back Layer 1 runs will hang; space them out.
+
+**Known issue backlog:** `docs/extraction-improvement-roadmap.md` catalogs extractor issues (E1-E11) and reconciliation issues (R1-R8) with win priorities. Attack the highest-ranked item that has a clean fixture path.
+
+---
+
 ## How the user works
 
 A few observed patterns. Honoring these saves rework:

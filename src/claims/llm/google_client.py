@@ -25,6 +25,14 @@ T = TypeVar("T", bound=BaseModel)
 
 DEFAULT_MODEL = "gemini-2.0-flash"
 
+# Hard per-request ceiling. Without this, a stuck TCP connection
+# (network blip, DNS failure) blocks the worker thread until the
+# OS-level keepalive teardown returns — observed to hang an entire
+# ingest for 12+ minutes on a single transient DNS outage. 60s is
+# generous for our ~4KB structured-output calls; anything past that
+# is almost certainly stuck and should fail into the retry layer.
+_REQUEST_TIMEOUT_MS = 60_000
+
 
 class GoogleClient:
     """Lazily-constructed google-genai client wrapper.
@@ -87,6 +95,9 @@ class GoogleClient:
                     response_mime_type="application/json",
                     response_schema=schema,
                     temperature=0.0,
+                    http_options=types.HttpOptions(
+                        timeout=_REQUEST_TIMEOUT_MS,
+                    ),
                 ),
             )
 
